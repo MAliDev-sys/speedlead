@@ -24,7 +24,7 @@ export function LeadActions(props: { leadId: string; status: LeadStatus }) {
       <button
         disabled={isPending}
         onClick={() => startTransition(() => claimLead(props.leadId))}
-        className="mt-3 w-full rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-60"
+        className="mt-3 w-full rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white shadow-sm shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60"
       >
         Claim this lead
       </button>

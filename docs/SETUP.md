@@ -12,6 +12,17 @@ for local dev + your first several customers.
 4. Apply the schema: `supabase db push` (runs everything in
    `supabase/migrations/`).
 
+> **Gotcha — email confirmation rate limits in dev:** Supabase's built-in
+> email sender (used for signup confirmation links) is a shared, heavily
+> throttled service meant only for quick testing (a handful of emails per
+> hour) — it's not meant for real signups and will start throwing "email
+> rate limit exceeded" almost immediately once you're testing signup
+> repeatedly. For local dev, turn off **Authentication → Sign In /
+> Providers → Email → "Confirm email"** so signup logs you in instantly
+> with no email sent. Before real customers sign up, replace it with a
+> custom SMTP provider under **Authentication → Emails → SMTP Settings**
+> — Resend (already in this stack) works well for that.
+
 ## 2. Vercel (hosting) — free Hobby tier
 1. Create account at https://vercel.com, connect your GitHub.
 2. Import this repo once it's pushed to GitHub; framework auto-detected as

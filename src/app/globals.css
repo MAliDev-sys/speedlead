@@ -1,18 +1,56 @@
+/* Loaded at runtime, not next/font — degrades gracefully to the system
+   stack below if the request is ever blocked, instead of failing the
+   build the way next/font/google does when it can't reach Google Fonts
+   at build time. Must precede @import "tailwindcss" — CSS requires plain
+   @import rules to come before any other rules. */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f8f9fc;
+  --foreground: #14162b;
+
+  /* Brand: deep indigo (trust, professional B2B) paired with a warm amber
+     accent (urgency/speed) — used sparingly for CTAs and highlights. */
+  --brand-50: #eef1ff;
+  --brand-100: #e0e4ff;
+  --brand-400: #7d7ff0;
+  --brand-500: #5b5cf0;
+  --brand-600: #4640e0;
+  --brand-700: #3830bd;
+  --brand-900: #201d6b;
+
+  --accent-400: #fbbf24;
+  --accent-500: #f59e0b;
+  --accent-600: #d97706;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+  --color-brand-50: var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-400: var(--brand-400);
+  --color-brand-500: var(--brand-500);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
+  --color-brand-900: var(--brand-900);
+
+  --color-accent-400: var(--accent-400);
+  --color-accent-500: var(--accent-500);
+  --color-accent-600: var(--accent-600);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
+}
+
+/* Subtle dot-grid texture for hero/CTA sections — pure CSS, no assets. */
+.bg-dot-grid {
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.18) 1px, transparent 1px);
+  background-size: 22px 22px;
 }

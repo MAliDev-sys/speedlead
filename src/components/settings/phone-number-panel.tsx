@@ -84,7 +84,7 @@ function ProvisionPanel() {
         <button
           type="submit"
           disabled={pending}
-          className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-60"
+          className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60"
         >
           {pending ? "Provisioning…" : "Get a number"}
         </button>
