@@ -3,6 +3,7 @@ import { requireCurrentOrg } from "@/lib/org";
 import { createClient } from "@/lib/supabase/server";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { LeadActions } from "@/components/lead-actions";
+import { ReplyBox } from "@/components/reply-box";
 import type { LeadEvent, MessageRow } from "@/lib/types/database";
 
 export const dynamic = "force-dynamic";
@@ -86,6 +87,8 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
               ) : null}
             </dl>
           </div>
+
+          <ReplyBox lead={lead} />
 
           <LeadActions leadId={lead.id} status={lead.status} />
         </aside>
