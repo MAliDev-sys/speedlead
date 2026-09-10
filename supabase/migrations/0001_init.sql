@@ -28,6 +28,17 @@ create table organizations (
   -- (Slack) configured yet, or as a fallback alongside it.
   alert_email text,
   alert_phone text,
+  -- Whether the instant SMS/email reply just acknowledges receipt
+  -- ('template', fixed copy, zero cost) or asks Claude to write a short
+  -- reply grounded in `ai_context` that actually addresses what the
+  -- customer asked ('ai') — automatically falls back to 'template' on any
+  -- AI failure/timeout, so a reply always goes out either way. See
+  -- lib/ai-respond.ts.
+  auto_respond_mode text not null default 'template'
+    check (auto_respond_mode in ('template', 'ai')),
+  -- Free-form business info (services, hours, service area, pricing notes)
+  -- fed to Claude as grounding context when auto_respond_mode = 'ai'.
+  ai_context text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

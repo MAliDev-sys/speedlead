@@ -52,9 +52,13 @@ export type Organization = {
   trial_ends_at: string | null;
   alert_email: string | null;
   alert_phone: string | null;
+  auto_respond_mode: AutoRespondMode;
+  ai_context: string | null;
   created_at: string;
   updated_at: string;
 };
+
+export type AutoRespondMode = "template" | "ai";
 
 export type Profile = {
   id: string;

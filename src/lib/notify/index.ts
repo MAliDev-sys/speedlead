@@ -5,6 +5,7 @@ import { sendSms } from "./sms";
 import { sendEmail } from "./email";
 import { sendSlackLeadAlert } from "./slack";
 import { sendWhatsApp } from "./whatsapp";
+import { generateAiReply } from "@/lib/ai-respond";
 import type { Lead, Organization } from "@/lib/types/database";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
@@ -70,49 +71,81 @@ export async function notifyNewLead(params: {
   };
 
   const firstName = lead.name?.split(" ")[0] || "there";
-  const smsBody = `Hi ${firstName}, thanks for reaching out to ${org.name}! We got your request and someone will call you shortly. Reply STOP to opt out.`;
-  const emailHtml = `<p>Hi ${firstName},</p><p>Thanks for reaching out to <strong>${org.name}</strong>! We received your request${
-    lead.message ? `: "${escapeHtml(lead.message)}"` : ""
-  } and a team member will contact you shortly.</p>`;
+
+  // Kicked off immediately (promises start executing on creation) so it
+  // runs concurrently with everything else below rather than serially
+  // delaying the whole response — generateAiReply() has its own hard
+  // timeout and NEVER throws/rejects, so this is safe to leave unawaited
+  // here and only awaited inside each channel's own task.
+  const aiReplyPromise: Promise<string | null> =
+    org.auto_respond_mode === "ai" && lead.message
+      ? generateAiReply({
+          businessName: org.name,
+          businessType: org.business_type,
+          aiContext: org.ai_context,
+          customerMessage: lead.message,
+          channel: "sms",
+        })
+      : Promise.resolve(null);
+
+  const buildSmsBody = (aiReply: string | null) =>
+    aiReply
+      ? `${aiReply} (A team member will also follow up shortly. Reply STOP to opt out.)`
+      : `Hi ${firstName}, thanks for reaching out to ${org.name}! We got your request and someone will call you shortly. Reply STOP to opt out.`;
+
+  const buildEmailHtml = (aiReply: string | null) =>
+    aiReply
+      ? `<p>Hi ${firstName},</p><p>${escapeHtml(aiReply)}</p><p>A team member from ${org.name} will also follow up shortly.</p>`
+      : `<p>Hi ${firstName},</p><p>Thanks for reaching out to <strong>${org.name}</strong>! We received your request${
+          lead.message ? `: "${escapeHtml(lead.message)}"` : ""
+        } and a team member will contact you shortly.</p>`;
 
   const tasks: Promise<void>[] = [];
 
   if (channels.includes("sms") && lead.phone) {
-    tasks.push(sendFromOrgNumber(admin, org, lead, smsBody, logMessage));
+    tasks.push(
+      aiReplyPromise.then((aiReply) =>
+        sendFromOrgNumber(admin, org, lead, buildSmsBody(aiReply), logMessage)
+      )
+    );
   }
 
   if (channels.includes("whatsapp") && lead.phone) {
     tasks.push(
-      sendWhatsApp({ to: lead.phone, body: smsBody }).then((res) =>
-        logMessage({
+      aiReplyPromise.then(async (aiReply) => {
+        const body = buildSmsBody(aiReply);
+        const res = await sendWhatsApp({ to: lead.phone!, body });
+        return logMessage({
           channel: "whatsapp",
           to: lead.phone!,
-          body: smsBody,
+          body,
           ok: res.ok,
           providerMessageId: res.providerMessageId,
           error: res.error,
-        })
-      )
+        });
+      })
     );
   }
 
   if (channels.includes("email") && lead.email) {
     tasks.push(
-      sendEmail({
-        to: lead.email,
-        subject: `We got your request — ${org.name}`,
-        html: emailHtml,
-        replyTo: org.alert_email ?? undefined,
-      }).then((res) =>
-        logMessage({
+      aiReplyPromise.then(async (aiReply) => {
+        const html = buildEmailHtml(aiReply);
+        const res = await sendEmail({
+          to: lead.email!,
+          subject: `We got your request — ${org.name}`,
+          html,
+          replyTo: org.alert_email ?? undefined,
+        });
+        return logMessage({
           channel: "email",
           to: lead.email!,
-          body: emailHtml,
+          body: html,
           ok: res.ok,
           providerMessageId: res.providerMessageId,
           error: res.error,
-        })
-      )
+        });
+      })
     );
   }
 

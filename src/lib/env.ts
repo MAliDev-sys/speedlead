@@ -19,6 +19,10 @@ const serverSchema = z.object({
   RESEND_API_KEY: z.string().optional(),
   RESEND_FROM_EMAIL: z.string().optional(), // e.g. "SpeedLead <leads@mail.speedlead.io>"
 
+  // Powers the AI auto-responder (see lib/ai-respond.ts). Optional — orgs
+  // with auto_respond_mode='ai' fall back to a fixed template when unset.
+  ANTHROPIC_API_KEY: z.string().optional(),
+
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
 
@@ -60,4 +64,8 @@ export function hasResend(env: ServerEnv = getEnv()) {
 
 export function hasStripe(env: ServerEnv = getEnv()) {
   return Boolean(env.STRIPE_SECRET_KEY);
+}
+
+export function hasAnthropic(env: ServerEnv = getEnv()) {
+  return Boolean(env.ANTHROPIC_API_KEY);
 }

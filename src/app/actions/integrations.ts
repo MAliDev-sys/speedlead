@@ -5,7 +5,7 @@ import Twilio from "twilio";
 import { createClient } from "@/lib/supabase/server";
 import { requireCurrentOrg } from "@/lib/org";
 import { getEnv, hasTwilio } from "@/lib/env";
-import type { LeadSourceType } from "@/lib/types/database";
+import type { AutoRespondMode, LeadSourceType } from "@/lib/types/database";
 
 /** Saves (upserts) a tenant's Slack Incoming Webhook URL for lead alerts. */
 export async function saveSlackWebhook(_prevState: unknown, formData: FormData) {
@@ -30,6 +30,32 @@ export async function saveSlackWebhook(_prevState: unknown, formData: FormData) 
 
   revalidatePath("/settings/integrations");
   return { message: webhookUrl ? "Slack connected." : "Slack disconnected." };
+}
+
+/**
+ * Saves how the instant reply should handle the customer's actual message:
+ * a fixed acknowledgment ('template') or a short Claude-generated reply
+ * grounded in `ai_context` ('ai', with automatic fallback to the template
+ * on any failure — see lib/ai-respond.ts).
+ */
+export async function saveAutoResponse(_prevState: unknown, formData: FormData) {
+  const { org } = await requireCurrentOrg();
+  const mode = String(formData.get("mode") ?? "template") as AutoRespondMode;
+  const aiContext = String(formData.get("ai_context") ?? "").trim();
+
+  if (!["template", "ai"].includes(mode)) {
+    return { error: "Invalid mode." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("organizations")
+    .update({ auto_respond_mode: mode, ai_context: aiContext || null })
+    .eq("id", org.id);
+  if (error) return { error: error.message };
+
+  revalidatePath("/settings/integrations");
+  return { message: "Auto-response settings saved." };
 }
 
 /** Creates an additional lead source (webhook or embeddable form) for the org. */

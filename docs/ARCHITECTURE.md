@@ -73,6 +73,39 @@ Why the first response must be synchronous: the entire value proposition of
 Only the *nurture* steps (which are inherently delayed by design) go through
 the job table.
 
+## Auto-response: answering the customer's actual query, fast
+
+The instant SMS/email reply can work two ways, per org (`organizations.auto_respond_mode`):
+
+- **`template`** (default, free) — a fixed acknowledgment ("thanks, we got
+  your request, someone will call you shortly").
+- **`ai`** — `lib/ai-respond.ts` asks Claude Haiku 4.5 to write a short
+  reply grounded *only* in the business's own `ai_context` (services,
+  hours, pricing notes the owner enters in Settings). It's instructed to
+  never invent facts, never claim to be human, and always note a real team
+  member will also follow up.
+
+**Guaranteeing the reply lands within seconds (well inside the product's
+30-60s bar), not just "eventually":**
+- `generateAiReply()` never throws and carries an 8s hard timeout
+  (`AbortController` via the SDK's per-request `timeout` option) — on any
+  failure, rate limit, or slow response it returns `null` instead of
+  blocking.
+- Every call site falls back to the fixed template the instant that
+  happens, so a reply always goes out — "either hardcoded or AI-generated"
+  is enforced as a fallback chain, not a choice that can silently fail.
+- In `notifyNewLead()`, the AI call is kicked off immediately and run
+  *concurrently* with the SMS/email/Slack sends (each channel `await`s the
+  same shared promise rather than the pipeline waiting on it serially), so
+  it never adds latency beyond whichever channel is already slowest.
+- Inbound SMS replies (`/api/webhooks/twilio/sms`) get the same treatment:
+  in `ai` mode, a follow-up question is answered inline in the same Twilio
+  webhook response (TwiML `<Message>`), comfortably inside Twilio's ~15s
+  webhook timeout.
+
+Cost stays low by design: Haiku 4.5 (not a larger model) at a few hundred
+tokens per reply is a small fraction of a cent per lead.
+
 ## Missed-call capture
 
 1. Each org gets a Twilio number (`phone_numbers` table) that forwards to the

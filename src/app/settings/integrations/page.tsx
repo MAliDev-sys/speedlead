@@ -4,6 +4,7 @@ import { DashboardShell } from "@/components/dashboard-shell";
 import { SlackForm } from "@/components/settings/slack-form";
 import { LeadSourceForm } from "@/components/settings/lead-source-form";
 import { PhoneNumberPanel } from "@/components/settings/phone-number-panel";
+import { AutoResponseForm } from "@/components/settings/auto-response-form";
 import { getEnv } from "@/lib/env";
 import type { Integration, LeadSource, PhoneNumber } from "@/lib/types/database";
 
@@ -32,6 +33,13 @@ export default async function IntegrationsPage() {
 
         <Section title="Missed-call text-back" description="Ring a real phone; auto-text anyone who doesn't get answered.">
           <PhoneNumberPanel phoneNumber={phoneNumber as PhoneNumber | null} />
+        </Section>
+
+        <Section
+          title="Auto-response"
+          description="What the instant reply actually says — a fixed message, or an AI reply grounded in your business info."
+        >
+          <AutoResponseForm mode={org.auto_respond_mode} aiContext={org.ai_context} />
         </Section>
 
         <Section title="Slack notifications" description="Alert your team the moment a lead comes in.">

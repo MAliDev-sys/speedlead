@@ -40,7 +40,18 @@ for local dev + your first several customers.
 2. Add + verify a sending domain (or use their shared test domain while in
    dev), grab the **API key**.
 
-## 5. Slack (team notifications) — free
+## 5. Anthropic (AI auto-response, optional) — pay as you go, very cheap
+1. Create account at https://console.anthropic.com and add a small amount of
+   credit (a few dollars covers thousands of auto-replies — Haiku 4.5 is
+   ~$1/$5 per million input/output tokens, and each reply is a few hundred
+   tokens).
+2. Create an API key at https://console.anthropic.com/settings/keys.
+3. Only needed if a business turns on "AI-generated reply" under Settings →
+   Integrations → Auto-response (see docs/ARCHITECTURE.md). Every org
+   defaults to the free fixed-template reply, so you can skip this step
+   entirely for local dev/QA and add it later.
+
+## 6. Slack (team notifications) — free
 1. Create a Slack App at https://api.slack.com/apps → "From scratch".
 2. Add the `chat:write` and `incoming-webhook` scopes, install to your own
    workspace for dev.
@@ -49,7 +60,7 @@ for local dev + your first several customers.
    the app submitted for distribution later; for the first customers, manual
    incoming-webhook URLs per org are a fine shortcut.
 
-## 6. Free cron trigger for the follow-up worker
+## 7. Free cron trigger for the follow-up worker
 Pick one (both are free):
 - **cron-job.org** — create a job that hits
   `https://<your-domain>/api/cron/process-jobs` every 1–5 minutes with a
@@ -57,7 +68,7 @@ Pick one (both are free):
 - **GitHub Actions** scheduled workflow in this repo (see
   `.github/workflows/cron.yml` once added) — `schedule: cron: '*/5 * * * *'`.
 
-## 7. Stripe (billing) — add once you have a pricing page ready
+## 8. Stripe (billing) — add once you have a pricing page ready
 1. Create account at https://stripe.com, get **publishable** + **secret**
    keys (test mode first).
 2. Create Products/Prices for your plans (e.g. Starter/Pro/Scale).
