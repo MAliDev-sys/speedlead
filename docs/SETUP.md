@@ -23,6 +23,17 @@ for local dev + your first several customers.
 > custom SMTP provider under **Authentication → Emails → SMTP Settings**
 > — Resend (already in this stack) works well for that.
 
+> **Required for "forgot password" to work:** Supabase's default password-
+> reset email links to Supabase's own hosted verify page, which this app
+> doesn't handle. Point it at our route instead: **Authentication → Emails
+> → Templates → Reset Password**, edit the link/button HTML so its `href`
+> is:
+> ```
+> {{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/reset-password
+> ```
+> (replacing whatever uses `{{ .ConfirmationURL }}`). See `/auth/confirm`
+> (`src/app/auth/confirm/route.ts`) for how that's verified.
+
 ## 2. Vercel (hosting) — free Hobby tier
 1. Create account at https://vercel.com, connect your GitHub.
 2. Import this repo once it's pushed to GitHub; framework auto-detected as

@@ -29,7 +29,21 @@ function LoginForm() {
       <form action={formAction} className="mt-6 space-y-4">
         <input type="hidden" name="next" value={next} />
         <Field label="Email" name="email" type="email" autoComplete="email" required />
-        <Field label="Password" name="password" type="password" autoComplete="current-password" required />
+        <div>
+          <div className="mb-1.5 flex items-center justify-between">
+            <span className="text-sm font-medium text-slate-700">Password</span>
+            <Link href="/forgot-password" className="text-xs font-medium text-brand-600 hover:text-brand-700">
+              Forgot password?
+            </Link>
+          </div>
+          <input
+            name="password"
+            type="password"
+            autoComplete="current-password"
+            required
+            className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+          />
+        </div>
 
         {state && "error" in state && state.error ? (
           <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{state.error}</p>

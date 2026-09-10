@@ -32,13 +32,22 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
-  const isAuthRoute = path.startsWith("/login") || path.startsWith("/signup");
+  const isAuthRoute =
+    path.startsWith("/login") || path.startsWith("/signup") || path.startsWith("/forgot-password");
   const isPublicRoute =
     isAuthRoute ||
     path === "/" ||
     path.startsWith("/api/") ||
     path.startsWith("/widget.js") ||
-    path.startsWith("/_next");
+    path.startsWith("/_next") ||
+    // /auth/confirm verifies the emailed token_hash and establishes the
+    // session itself — there is no session yet on that first request, so
+    // it must stay public or the redirect-to-login below fires first and
+    // the link never gets a chance to verify. Also covers /reset-password
+    // so someone can land there straight from the email a moment before
+    // /auth/confirm's redirect finishes setting the recovery session.
+    path.startsWith("/auth/") ||
+    path.startsWith("/reset-password");
 
   if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone();
