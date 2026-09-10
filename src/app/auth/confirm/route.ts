@@ -30,7 +30,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${origin}${next}`);
     }
     console.error("[auth/confirm] verifyOtp failed:", error.message);
+    return NextResponse.redirect(
+      `${origin}/login?error=invalid_or_expired_link&reason=${encodeURIComponent(error.message)}`
+    );
   }
 
-  return NextResponse.redirect(`${origin}/login?error=invalid_or_expired_link`);
+  console.error("[auth/confirm] missing token_hash or type in link:", request.url);
+  return NextResponse.redirect(
+    `${origin}/login?error=invalid_or_expired_link&reason=${encodeURIComponent(
+      "The link was missing required parameters — check the Reset Password email template."
+    )}`
+  );
 }

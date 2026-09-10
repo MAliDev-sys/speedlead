@@ -16,15 +16,29 @@ export default function LoginPage() {
   );
 }
 
+const URL_ERROR_MESSAGES: Record<string, string> = {
+  invalid_or_expired_link:
+    "That link didn't work — it may have expired or already been used. Request a new one below.",
+};
+
 function LoginForm() {
   const searchParams = useSearchParams();
   const next = searchParams.get("next") ?? "/leads";
+  const urlError = searchParams.get("error");
+  const urlErrorReason = searchParams.get("reason");
   const [state, formAction, pending] = useActionState(signIn, undefined);
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm shadow-slate-200/60">
       <h1 className="text-xl font-bold text-slate-900">Log in to SpeedLead</h1>
       <p className="mt-1 text-sm text-slate-500">Respond to every lead in seconds, not hours.</p>
+
+      {urlError ? (
+        <div className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          <p>{URL_ERROR_MESSAGES[urlError] ?? "Something went wrong with that link. Please try again."}</p>
+          {urlErrorReason ? <p className="mt-1 text-xs text-amber-700/80">Details: {urlErrorReason}</p> : null}
+        </div>
+      ) : null}
 
       <form action={formAction} className="mt-6 space-y-4">
         <input type="hidden" name="next" value={next} />
