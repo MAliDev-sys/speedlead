@@ -25,7 +25,7 @@ export type Json =
   | Json[];
 
 export type MemberRole = "owner" | "admin" | "agent";
-export type LeadSourceType = "webhook" | "form" | "missed_call" | "manual" | "api";
+export type LeadSourceType = "webhook" | "form" | "missed_call" | "manual" | "api" | "email";
 export type LeadStatus =
   | "new"
   | "contacted"

@@ -62,6 +62,23 @@ for local dev + your first several customers.
 2. Add + verify a sending domain (or use their shared test domain while in
    dev), grab the **API key**.
 
+## 4b. Resend inbound email (optional) — free, same Resend account
+Lets a customer email the business directly and have it become a lead,
+same as a form submission or missed call.
+1. In Resend: **Emails → Receiving** tab. Either use the default
+   `<id>.resend.app` subdomain (zero DNS setup) or add MX records for a
+   custom domain — the subdomain shown there is your `RESEND_INBOUND_DOMAIN`.
+2. Still on that tab, **Create a received mail webhook**: URL is
+   `https://<your-domain>/api/webhooks/resend`, subscribed to the
+   `email.received` event. Copy its **signing secret** (`whsec_...`) into
+   `RESEND_WEBHOOK_SECRET`.
+3. That's it — every org automatically gets a dedicated inbound address
+   (`{token}@{RESEND_INBOUND_DOMAIN}`, shown in Settings → Integrations →
+   Lead sources) the moment both env vars are set. No per-org setup.
+4. For local dev, the webhook needs a public URL — use a tunnel (e.g.
+   `ngrok http 3000`) and point the Resend webhook at the tunnel's URL
+   instead of `localhost`.
+
 ## 5. Anthropic (AI auto-response, optional) — pay as you go, very cheap
 1. Create account at https://console.anthropic.com and add a small amount of
    credit (a few dollars covers thousands of auto-replies — Haiku 4.5 is

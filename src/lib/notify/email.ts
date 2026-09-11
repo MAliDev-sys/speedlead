@@ -51,3 +51,33 @@ export async function sendEmail(params: {
     return { ok: false, error };
   }
 }
+
+export interface ReceivedEmail {
+  from: string;
+  subject: string;
+  text: string | null;
+  html: string | null;
+}
+
+/**
+ * Fetches the full content of an inbound email. The `email.received`
+ * webhook payload only carries metadata (from/to/subject/attachment
+ * names) — the body has to be retrieved separately. See
+ * api/webhooks/resend/route.ts, the only caller.
+ */
+export async function getReceivedEmail(id: string): Promise<ReceivedEmail | null> {
+  const resend = getResendClient();
+  if (!resend) return null;
+
+  try {
+    const { data, error } = await resend.emails.receiving.get(id);
+    if (error || !data) {
+      console.error("[email] getReceivedEmail failed", error?.message);
+      return null;
+    }
+    return { from: data.from, subject: data.subject, text: data.text, html: data.html };
+  } catch (err) {
+    console.error("[email] getReceivedEmail failed", err instanceof Error ? err.message : err);
+    return null;
+  }
+}

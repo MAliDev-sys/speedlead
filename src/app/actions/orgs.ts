@@ -46,13 +46,14 @@ export async function createOrganization(_prevState: unknown, formData: FormData
     return { error: memberError.message };
   }
 
-  // A default generic webhook source so the org has something to point
-  // Zapier/LSA/Facebook at immediately after signup.
-  await admin.from("lead_sources").insert({
-    org_id: org.id,
-    type: "webhook",
-    name: "General webhook",
-  });
+  // Default lead sources so the org has something usable immediately:
+  // a generic webhook to point Zapier/LSA/Facebook at, and a dedicated
+  // inbound email address (see api/webhooks/resend/route.ts) so a
+  // customer emailing the business directly also becomes a lead.
+  await admin.from("lead_sources").insert([
+    { org_id: org.id, type: "webhook", name: "General webhook" },
+    { org_id: org.id, type: "email", name: "Email" },
+  ]);
 
   redirect("/leads");
 }

@@ -13,7 +13,9 @@ export const dynamic = "force-dynamic";
 export default async function IntegrationsPage() {
   const { org } = await requireCurrentOrg();
   const supabase = await createClient();
-  const appUrl = getEnv().NEXT_PUBLIC_APP_URL;
+  const env = getEnv();
+  const appUrl = env.NEXT_PUBLIC_APP_URL;
+  const inboundDomain = env.RESEND_INBOUND_DOMAIN ?? null;
 
   const [{ data: sources }, { data: slackIntegration }, { data: phoneNumber }] = await Promise.all([
     supabase.from("lead_sources").select("*").eq("org_id", org.id).order("created_at"),
@@ -46,10 +48,13 @@ export default async function IntegrationsPage() {
           <SlackForm integration={slackIntegration as Integration | null} />
         </Section>
 
-        <Section title="Lead sources" description="Webhook URLs (Zapier, Google LSA, Facebook Lead Ads) and the embeddable website form.">
+        <Section
+          title="Lead sources"
+          description="Webhook URLs (Zapier, Google LSA, Facebook Lead Ads), the embeddable website form, and a dedicated inbound email address."
+        >
           <div className="space-y-3">
             {(sources as LeadSource[] | null ?? []).map((source) => (
-              <SourceRow key={source.id} source={source} appUrl={appUrl} />
+              <SourceRow key={source.id} source={source} appUrl={appUrl} inboundDomain={inboundDomain} />
             ))}
           </div>
           <LeadSourceForm />
@@ -69,7 +74,41 @@ function Section(props: { title: string; description: string; children: React.Re
   );
 }
 
-function SourceRow({ source, appUrl }: { source: LeadSource; appUrl: string }) {
+function SourceRow({
+  source,
+  appUrl,
+  inboundDomain,
+}: {
+  source: LeadSource;
+  appUrl: string;
+  inboundDomain: string | null;
+}) {
+  if (source.type === "email") {
+    return (
+      <div className="rounded-lg border border-slate-200 p-3">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium text-slate-800">{source.name}</span>
+          <span className="text-xs uppercase text-slate-400">{source.type}</span>
+        </div>
+        {inboundDomain ? (
+          <>
+            <code className="mt-2 block truncate rounded bg-slate-50 px-2 py-1 text-xs text-slate-600">
+              {source.public_token}@{inboundDomain}
+            </code>
+            <p className="mt-2 text-xs text-slate-400">
+              Give customers this address, or set your existing business inbox to auto-forward here.
+            </p>
+          </>
+        ) : (
+          <p className="mt-2 text-xs text-amber-600">
+            Not set up yet — the platform operator needs to configure Resend inbound receiving
+            (see docs/SETUP.md).
+          </p>
+        )}
+      </div>
+    );
+  }
+
   const url =
     source.type === "form"
       ? `${appUrl}/api/leads/submit/${source.public_token}`

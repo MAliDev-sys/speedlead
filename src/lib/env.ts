@@ -19,6 +19,12 @@ const serverSchema = z.object({
   RESEND_API_KEY: z.string().optional(),
   RESEND_FROM_EMAIL: z.string().optional(), // e.g. "SpeedLead <leads@mail.speedlead.io>"
 
+  // Inbound email intake (customer emails the business directly — see
+  // src/app/api/webhooks/resend/route.ts). Both optional: without them,
+  // orgs just don't get an "Email" lead source shown in Settings.
+  RESEND_INBOUND_DOMAIN: z.string().optional(), // e.g. "abc123.resend.dev" or a verified custom domain
+  RESEND_WEBHOOK_SECRET: z.string().optional(), // the "received mail" webhook's signing secret (whsec_...)
+
   // Powers the AI auto-responder (see lib/ai-respond.ts). Optional — orgs
   // with auto_respond_mode='ai' fall back to a fixed template when unset.
   ANTHROPIC_API_KEY: z.string().optional(),
@@ -68,4 +74,8 @@ export function hasStripe(env: ServerEnv = getEnv()) {
 
 export function hasAnthropic(env: ServerEnv = getEnv()) {
   return Boolean(env.ANTHROPIC_API_KEY);
+}
+
+export function hasResendInbound(env: ServerEnv = getEnv()) {
+  return Boolean(env.RESEND_INBOUND_DOMAIN && env.RESEND_WEBHOOK_SECRET && hasResend(env));
 }
