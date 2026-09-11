@@ -17,11 +17,25 @@ export default async function IntegrationsPage() {
   const appUrl = env.NEXT_PUBLIC_APP_URL;
   const inboundDomain = env.RESEND_INBOUND_DOMAIN ?? null;
 
-  const [{ data: sources }, { data: slackIntegration }, { data: phoneNumber }] = await Promise.all([
+  const [{ data: fetchedSources }, { data: slackIntegration }, { data: phoneNumber }] = await Promise.all([
     supabase.from("lead_sources").select("*").eq("org_id", org.id).order("created_at"),
     supabase.from("integrations").select("*").eq("org_id", org.id).eq("type", "slack").maybeSingle(),
     supabase.from("phone_numbers").select("*").eq("org_id", org.id).maybeSingle(),
   ]);
+
+  let sources = fetchedSources ?? [];
+
+  // Backfill: orgs created before the "Email" lead source existed never
+  // got one auto-provisioned (see app/actions/orgs.ts). Create it lazily
+  // here on first visit rather than requiring a one-off migration script.
+  if (!sources.some((s) => s.type === "email")) {
+    const { data: created } = await supabase
+      .from("lead_sources")
+      .insert({ org_id: org.id, type: "email", name: "Email" })
+      .select()
+      .single();
+    if (created) sources = [...sources, created];
+  }
 
   return (
     <DashboardShell org={org}>
@@ -53,7 +67,7 @@ export default async function IntegrationsPage() {
           description="Webhook URLs (Zapier, Google LSA, Facebook Lead Ads), the embeddable website form, and a dedicated inbound email address."
         >
           <div className="space-y-3">
-            {(sources as LeadSource[] | null ?? []).map((source) => (
+            {(sources as LeadSource[]).map((source) => (
               <SourceRow key={source.id} source={source} appUrl={appUrl} inboundDomain={inboundDomain} />
             ))}
           </div>
