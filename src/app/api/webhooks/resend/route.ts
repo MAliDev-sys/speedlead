@@ -6,6 +6,23 @@ import { getEnv, hasResendInbound } from "@/lib/env";
 export const dynamic = "force-dynamic";
 
 /**
+ * Diagnostic — GET this same URL in a browser to see exactly what this
+ * deployment currently has configured, without exposing secret values.
+ * Use this instead of guessing whether a Vercel env var actually saved:
+ * it reads process.env live, on the deployment that's actually running.
+ */
+export async function GET() {
+  const env = getEnv();
+  return Response.json({
+    resend_api_key_set: Boolean(env.RESEND_API_KEY),
+    resend_from_email_set: Boolean(env.RESEND_FROM_EMAIL),
+    resend_inbound_domain: env.RESEND_INBOUND_DOMAIN ?? null,
+    resend_webhook_secret_set: Boolean(env.RESEND_WEBHOOK_SECRET),
+    fully_configured: hasResendInbound(env),
+  });
+}
+
+/**
  * Inbound email intake: POST /api/webhooks/resend
  *
  * A customer emailing the business directly is a lead source too, not
