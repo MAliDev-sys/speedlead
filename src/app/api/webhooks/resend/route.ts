@@ -44,9 +44,18 @@ export async function POST(request: Request) {
   }
 
   const rawBody = await request.text();
-  const webhookId = request.headers.get("webhook-id");
-  const webhookTimestamp = request.headers.get("webhook-timestamp");
-  const webhookSignature = request.headers.get("webhook-signature");
+  // Resend's webhook delivery runs on Svix, which sends `svix-id` /
+  // `svix-timestamp` / `svix-signature` on the wire (confirmed via a
+  // failed delivery: Resend's own event IDs are `msg_...`, Svix's
+  // convention) — but the `standardwebhooks` library's `verify()` only
+  // recognizes keys literally named `webhook-id` etc. in the object we
+  // pass it, so map one to the other rather than reading `webhook-*`
+  // directly off the request.
+  const webhookId = request.headers.get("svix-id") ?? request.headers.get("webhook-id");
+  const webhookTimestamp =
+    request.headers.get("svix-timestamp") ?? request.headers.get("webhook-timestamp");
+  const webhookSignature =
+    request.headers.get("svix-signature") ?? request.headers.get("webhook-signature");
 
   if (!webhookId || !webhookTimestamp || !webhookSignature) {
     return new Response("Missing webhook signature headers.", { status: 400 });
