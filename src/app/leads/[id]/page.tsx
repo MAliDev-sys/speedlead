@@ -103,7 +103,7 @@ function buildTimeline(events: LeadEvent[], messages: MessageRow[]) {
       key: `event-${e.id}`,
       at: e.created_at,
       label: describeEvent(e),
-      detail: null as string | null,
+      detail: describeEventDetail(e),
     })),
     ...messages.map((m) => ({
       key: `message-${m.id}`,
@@ -118,14 +118,27 @@ function buildTimeline(events: LeadEvent[], messages: MessageRow[]) {
 }
 
 function describeEvent(e: LeadEvent): string {
+  const payload = e.payload as { ok?: boolean } | null;
   switch (e.type) {
     case "created":
       return "Lead created";
     case "status_changed":
       return `Status changed to ${(e.payload as Record<string, string>)?.status ?? "?"}`;
+    case "slack_notified":
+      return payload?.ok === false ? "Slack notification failed" : "Slack notified";
     default:
+      if (e.type.endsWith("_sent") && payload?.ok === false) {
+        return `${e.type.replace(/_/g, " ")} — failed`;
+      }
       return e.type.replace(/_/g, " ");
   }
+}
+
+/** Surfaces the underlying error for a failed send, if there is one. */
+function describeEventDetail(e: LeadEvent): string | null {
+  const payload = e.payload as { ok?: boolean; error?: string | null } | null;
+  if (payload?.ok === false && payload.error) return payload.error;
+  return null;
 }
 
 function formatDuration(seconds: number) {
