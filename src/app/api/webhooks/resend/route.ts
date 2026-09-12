@@ -99,9 +99,11 @@ export async function POST(request: Request) {
     return new Response("ok", { status: 200 });
   }
 
-  const email = await getReceivedEmail(emailId);
+  const { email, error: fetchError } = await getReceivedEmail(emailId);
   if (!email) {
-    return new Response("Failed to fetch email content.", { status: 502 });
+    return new Response(`Failed to fetch email content: ${fetchError ?? "unknown error"}`, {
+      status: 502,
+    });
   }
 
   const { name, email: fromEmail } = parseFromHeader(email.from);

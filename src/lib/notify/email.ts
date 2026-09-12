@@ -59,25 +59,37 @@ export interface ReceivedEmail {
   html: string | null;
 }
 
+export interface GetReceivedEmailResult {
+  email: ReceivedEmail | null;
+  error?: string;
+}
+
 /**
  * Fetches the full content of an inbound email. The `email.received`
  * webhook payload only carries metadata (from/to/subject/attachment
  * names) — the body has to be retrieved separately. See
  * api/webhooks/resend/route.ts, the only caller.
+ *
+ * Returns the underlying error message on failure (rather than just
+ * null) so the caller can put it in the HTTP response body — Resend's
+ * dashboard shows each webhook delivery's response body directly, which
+ * is a much faster diagnostic loop than digging through Vercel logs.
  */
-export async function getReceivedEmail(id: string): Promise<ReceivedEmail | null> {
+export async function getReceivedEmail(id: string): Promise<GetReceivedEmailResult> {
   const resend = getResendClient();
-  if (!resend) return null;
+  if (!resend) return { email: null, error: "resend_not_configured" };
 
   try {
     const { data, error } = await resend.emails.receiving.get(id);
     if (error || !data) {
-      console.error("[email] getReceivedEmail failed", error?.message);
-      return null;
+      const message = error?.message ?? "no data returned";
+      console.error("[email] getReceivedEmail failed", message);
+      return { email: null, error: message };
     }
-    return { from: data.from, subject: data.subject, text: data.text, html: data.html };
+    return { email: { from: data.from, subject: data.subject, text: data.text, html: data.html } };
   } catch (err) {
-    console.error("[email] getReceivedEmail failed", err instanceof Error ? err.message : err);
-    return null;
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[email] getReceivedEmail failed", message);
+    return { email: null, error: message };
   }
 }
