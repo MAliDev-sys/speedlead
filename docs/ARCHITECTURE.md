@@ -35,6 +35,20 @@ paying tenants — trivially covered by their subscription.
   behalf of the platform, not a logged-in user — that key never reaches the
   browser.
 
+## Access model: invite-only, not self-serve
+
+There is no public signup. A `platform_admins` table (service-role-only —
+no RLS policy grants it to anyone, including its own members) gates a
+`/admin` area where the platform operator creates every client workspace
+and invites its owner user directly (Supabase Admin API
+`inviteUserByEmail`), after handling payment entirely outside this app
+(Payoneer, etc. — deliberately no Stripe/billing integration here). Each
+org's `subscription_status` (`active` / `trialing` / `suspended`) is the
+access switch: `requireCurrentOrg()` redirects to `/suspended` the moment
+an admin flips it, with no code deploy needed. `plan` (`demo` / `pro` /
+...) is currently just a label the admin sets — no feature gating is
+wired to it yet.
+
 ## The speed-to-lead flow
 
 ```

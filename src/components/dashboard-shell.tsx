@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { Zap, Inbox, Plug, Clock3 } from "lucide-react";
+import { Zap, Inbox, Plug, Clock3, ShieldCheck } from "lucide-react";
 import type { Organization } from "@/lib/types/database";
 import { SignOutButton } from "@/components/sign-out-button";
+import { isPlatformAdmin } from "@/lib/admin";
 
 const NAV = [
   { href: "/leads", label: "Leads", icon: Inbox },
@@ -9,7 +10,12 @@ const NAV = [
   { href: "/settings/sequences", label: "Follow-ups", icon: Clock3 },
 ];
 
-export function DashboardShell(props: { org: Organization; children: React.ReactNode }) {
+export async function DashboardShell(props: {
+  org: Organization;
+  userId: string;
+  children: React.ReactNode;
+}) {
+  const showAdminLink = await isPlatformAdmin(props.userId);
   const initials = props.org.name
     .split(" ")
     .map((word) => word[0])
@@ -42,6 +48,15 @@ export function DashboardShell(props: { org: Organization; children: React.React
             </nav>
           </div>
           <div className="flex items-center gap-3">
+            {showAdminLink ? (
+              <Link
+                href="/admin"
+                className="flex items-center gap-1.5 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+              >
+                <ShieldCheck className="h-3.5 w-3.5" />
+                Admin
+              </Link>
+            ) : null}
             <span className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 py-1 pl-1 pr-3 text-sm text-slate-700">
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-100 text-[11px] font-semibold text-brand-700">
                 {initials || "?"}

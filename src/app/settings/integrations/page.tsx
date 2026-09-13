@@ -11,7 +11,7 @@ import type { Integration, LeadSource, PhoneNumber } from "@/lib/types/database"
 export const dynamic = "force-dynamic";
 
 export default async function IntegrationsPage() {
-  const { org } = await requireCurrentOrg();
+  const { org, userId } = await requireCurrentOrg();
   const supabase = await createClient();
   const env = getEnv();
   const appUrl = env.NEXT_PUBLIC_APP_URL;
@@ -38,7 +38,7 @@ export default async function IntegrationsPage() {
   }
 
   return (
-    <DashboardShell org={org}>
+    <DashboardShell org={org} userId={userId}>
       <div className="space-y-8">
         <section>
           <h1 className="text-xl font-semibold text-slate-900">Integrations</h1>

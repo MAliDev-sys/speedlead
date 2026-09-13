@@ -20,7 +20,7 @@ const DEFAULT_STEPS: SequenceStep[] = [
 ];
 
 export default async function SequencesPage() {
-  const { org } = await requireCurrentOrg();
+  const { org, userId } = await requireCurrentOrg();
   const supabase = await createClient();
 
   const { data: sequence } = await supabase
@@ -33,7 +33,7 @@ export default async function SequencesPage() {
   const steps = (sequence?.steps as SequenceStep[] | undefined) ?? DEFAULT_STEPS;
 
   return (
-    <DashboardShell org={org}>
+    <DashboardShell org={org} userId={userId}>
       <h1 className="text-xl font-semibold text-slate-900">Follow-up sequence</h1>
       <p className="mt-1 text-sm text-slate-500">
         If a lead doesn&apos;t reply, automatically nudge them again. Cancelled the moment they

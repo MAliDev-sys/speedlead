@@ -157,6 +157,11 @@ export type Sequence = {
   created_at: string;
 };
 
+export type PlatformAdmin = {
+  user_id: string;
+  created_at: string;
+};
+
 export type ScheduledJob = {
   id: string;
   org_id: string;
@@ -192,6 +197,7 @@ export type Database = {
       phone_numbers: Table<PhoneNumber>;
       sequences: Table<Sequence>;
       scheduled_jobs: Table<ScheduledJob>;
+      platform_admins: Table<PlatformAdmin>;
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

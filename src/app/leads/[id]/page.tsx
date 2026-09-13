@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 export default async function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { org } = await requireCurrentOrg();
+  const { org, userId } = await requireCurrentOrg();
   const supabase = await createClient();
 
   const { data: lead } = await supabase.from("leads").select("*").eq("id", id).maybeSingle();
@@ -32,7 +32,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
   const timeline = buildTimeline(events ?? [], messages ?? []);
 
   return (
-    <DashboardShell org={org}>
+    <DashboardShell org={org} userId={userId}>
       <div className="grid gap-6 md:grid-cols-3">
         <div className="md:col-span-2">
           <h1 className="text-xl font-semibold text-slate-900">

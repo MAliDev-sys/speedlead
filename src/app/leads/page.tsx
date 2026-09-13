@@ -18,7 +18,7 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 export default async function LeadsPage() {
-  const { org } = await requireCurrentOrg();
+  const { org, userId } = await requireCurrentOrg();
   const supabase = await createClient();
 
   const { data: leads } = await supabase
@@ -36,7 +36,7 @@ export default async function LeadsPage() {
   const awaitingResponse = rows.filter((l) => l.status === "new").length;
 
   return (
-    <DashboardShell org={org}>
+    <DashboardShell org={org} userId={userId}>
       <h1 className="text-xl font-bold text-slate-900">Leads</h1>
       <p className="mt-1 text-sm text-slate-500">Everyone who&apos;s reached out, fastest response first.</p>
 

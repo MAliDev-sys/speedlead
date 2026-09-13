@@ -12,6 +12,33 @@ for local dev + your first several customers.
 4. Apply the schema: `supabase db push` (runs everything in
    `supabase/migrations/`).
 
+## 1b. Lock down signups (required — this app is invite-only)
+SpeedLead is not self-serve: you (the platform admin) create every client
+workspace from `/admin` after handling payment yourself (Payoneer, etc. —
+nothing here processes payment). Three steps to enforce that:
+
+1. **Disable public signup** — Supabase → **Authentication → Sign In /
+   Providers → Email** (or **Authentication → Settings**, depending on
+   dashboard version) → turn **off** "Allow new users to sign up". This
+   blocks account creation via the public API entirely; only the
+   service-role Admin API (which `/admin` uses) can still create users.
+2. **Customize the "Invite user" email template** the same way you did
+   for Reset Password — **Authentication → Emails → Templates → Invite
+   user** — set its link to:
+   ```
+   {{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite&next=/reset-password
+   ```
+   New clients land on the same "set a new password" page password-reset
+   users do (`src/app/reset-password/page.tsx`) — same flow, different entry point.
+3. **Bootstrap yourself as the first platform admin** — find your own
+   user ID at **Authentication → Users** (copy the UID next to your
+   email), then in the SQL Editor:
+   ```sql
+   insert into platform_admins (user_id) values ('<your-uid>');
+   ```
+   Now `/admin` is reachable from your account (an "Admin" link appears
+   in the dashboard nav) — that's where you add every client from here on.
+
 > **Gotcha — email confirmation rate limits in dev:** Supabase's built-in
 > email sender (used for signup confirmation links) is a shared, heavily
 > throttled service meant only for quick testing (a handful of emails per

@@ -48,6 +48,10 @@ export async function requireCurrentOrg(): Promise<{
     redirect("/onboarding");
   }
 
+  if (org.subscription_status === "suspended") {
+    redirect("/suspended");
+  }
+
   return {
     org,
     role: membership.role,
