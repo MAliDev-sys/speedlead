@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyTwilioSignature } from "@/lib/notify/sms";
 import { sendSlackLeadAlert } from "@/lib/notify/slack";
 import { generateAiReply } from "@/lib/ai-respond";
+import { getConversationHistory } from "@/lib/conversation";
 import { getEnv } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
@@ -59,6 +60,11 @@ export async function POST(request: Request) {
       .maybeSingle();
 
     if (lead) {
+      // Fetch history before logging this inbound message, so the AI
+      // reply below sees "everything said before this" separately from
+      // "the new message" rather than double-counting it.
+      const history = await getConversationHistory(lead.id);
+
       await admin.from("messages").insert({
         org_id: lead.org_id,
         lead_id: lead.id,
@@ -112,6 +118,7 @@ export async function POST(request: Request) {
           businessName: org.name,
           businessType: org.business_type,
           aiContext: org.ai_context,
+          history,
           customerMessage: body,
           channel: "sms",
         });

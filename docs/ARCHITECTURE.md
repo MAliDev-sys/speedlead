@@ -117,6 +117,38 @@ The instant SMS/email reply can work two ways, per org (`organizations.auto_resp
   webhook response (TwiML `<Message>`), comfortably inside Twilio's ~15s
   webhook timeout.
 
+**Conversation memory:** `generateAiReply()` takes the lead's prior
+messages (`lib/conversation.ts` → `getConversationHistory()`, capped at the
+most recent 20 turns) as real multi-turn Claude `messages`, not just the
+latest text in isolation — it can reference what the customer already said
+two messages ago (a mentioned roof size, a stated timeline) instead of
+re-asking or answering each message as if it were the first. Business
+info + the fixed rules live in `system` (static across turns); only
+sms/email/whatsapp messages count as "the conversation" (Slack is an
+internal team alert the customer never sees) and failed sends are
+excluded, since we never actually said that to them. Every call site
+fetches history *before* logging the new inbound message, so the new
+message is never double-counted as both "history" and "the message to
+answer."
+
+**Email threading:** a second email from a sender who already has a lead
+for that org continues the existing lead (logged, AI-replied-to with
+history, Slack-pinged) instead of spawning a duplicate — the same
+most-recent-lead-by-contact lookup the SMS webhook already used, now
+mirrored in `/api/webhooks/resend`. Only a brand-new sender triggers the
+full multi-channel `notifyNewLead()` blast; replies use a narrower
+single-channel reply path (`handleReply()` in that route, structurally the
+same shape as the SMS webhook's reply handling).
+
+**Qualifying/closing behavior:** the system prompt doesn't just answer
+questions — it asks one focused qualifying question at a time when the
+job is still vague, computes a ballpark estimate from a rate/formula in
+`ai_context` when there's enough detail to (always framed as non-binding,
+pending a real on-site quote — never a firm number), and nudges toward a
+concrete next step ("want us to schedule a free on-site quote?") once it's
+given a real answer or the customer signals they're ready — without
+forcing that onto every single reply.
+
 Cost stays low by design: Haiku 4.5 (not a larger model) at a few hundred
 tokens per reply is a small fraction of a cent per lead.
 

@@ -83,6 +83,10 @@ export async function notifyNewLead(params: {
           businessName: org.name,
           businessType: org.business_type,
           aiContext: org.ai_context,
+          // Lead was just created this request — there is no prior
+          // conversation yet, so skip the DB round-trip and pass an
+          // empty history directly rather than querying for it.
+          history: [],
           customerMessage: lead.message,
           channel: "sms",
         })

@@ -1,6 +1,10 @@
 import { Webhook } from "standardwebhooks";
 import { getLeadSourceByToken, createLeadAndNotify, LeadValidationError } from "@/lib/leads";
-import { getReceivedEmail } from "@/lib/notify/email";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { getReceivedEmail, sendEmail } from "@/lib/notify/email";
+import { sendSlackLeadAlert } from "@/lib/notify/slack";
+import { generateAiReply } from "@/lib/ai-respond";
+import { getConversationHistory, stripHtml } from "@/lib/conversation";
 import { getEnv, hasResendInbound, hasGmailSmtp } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
@@ -43,6 +47,12 @@ export async function GET() {
  * (Emails → Receiving) once RESEND_INBOUND_DOMAIN is set up — see
  * docs/SETUP.md. The webhook payload only carries metadata (no body), so
  * this fetches the full email via the Receiving API once verified.
+ *
+ * Threading: if this sender already has a lead for this org, this is a
+ * reply in an ongoing conversation, not a new inquiry — it's logged onto
+ * the existing lead (with conversation-aware AI reply, same as the SMS
+ * webhook) instead of spawning a duplicate lead and re-firing the full
+ * multi-channel "new lead" blast.
  */
 export async function POST(request: Request) {
   const env = getEnv();
@@ -116,8 +126,25 @@ export async function POST(request: Request) {
   const { name, email: fromEmail } = parseFromHeader(email.from);
   const message = email.text?.trim() || stripHtml(email.html) || `(No body) Subject: ${email.subject}`;
 
+  const admin = createAdminClient();
+  const { org } = lookup;
+
+  const { data: existingLead } = await admin
+    .from("leads")
+    .select("id, status")
+    .eq("org_id", org.id)
+    .eq("email", fromEmail)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (existingLead) {
+    await handleReply({ admin, org, leadId: existingLead.id, leadStatus: existingLead.status, fromEmail, message });
+    return new Response("ok", { status: 200 });
+  }
+
   try {
-    await createLeadAndNotify(lookup.source, lookup.org, {
+    await createLeadAndNotify(lookup.source, org, {
       name,
       email: fromEmail,
       message,
@@ -134,6 +161,112 @@ export async function POST(request: Request) {
   return new Response("ok", { status: 200 });
 }
 
+type AdminClient = ReturnType<typeof createAdminClient>;
+
+/**
+ * A follow-up email from a sender who already has a lead: log it onto
+ * that lead, ping Slack, and — in AI mode — reply with full conversation
+ * memory. Mirrors webhooks/twilio/sms's reply handling; deliberately
+ * does NOT re-run the full multi-channel notifyNewLead() blast, since
+ * this isn't a new inquiry.
+ */
+async function handleReply(params: {
+  admin: AdminClient;
+  org: { id: string; name: string; alert_email: string | null; auto_respond_mode: string; ai_context: string | null; business_type: string | null };
+  leadId: string;
+  leadStatus: string;
+  fromEmail: string;
+  message: string;
+}) {
+  const { admin, org, leadId, leadStatus, fromEmail, message } = params;
+  const env = getEnv();
+
+  // History before logging this message, so the AI sees "everything
+  // said before" separately from "the new message" rather than double-
+  // counting it.
+  const history = await getConversationHistory(leadId);
+
+  await admin.from("messages").insert({
+    org_id: org.id,
+    lead_id: leadId,
+    channel: "email",
+    direction: "inbound",
+    from_address: fromEmail,
+    body: message,
+    status: "received",
+  });
+
+  if (leadStatus === "new" || leadStatus === "contacted") {
+    await admin.from("leads").update({ status: "responded" }).eq("id", leadId);
+  }
+
+  const { data: integration } = await admin
+    .from("integrations")
+    .select("config, status")
+    .eq("org_id", org.id)
+    .eq("type", "slack")
+    .maybeSingle();
+
+  const webhookUrl =
+    integration?.status === "connected" &&
+    integration.config &&
+    typeof integration.config === "object" &&
+    "webhook_url" in integration.config
+      ? String((integration.config as Record<string, unknown>).webhook_url)
+      : null;
+
+  if (webhookUrl) {
+    await sendSlackLeadAlert({
+      webhookUrl,
+      orgName: org.name,
+      leadName: null,
+      leadPhone: null,
+      leadEmail: fromEmail,
+      leadMessage: `💬 Reply: "${message}"`,
+      source: "Email reply",
+      leadUrl: `${env.NEXT_PUBLIC_APP_URL}/leads/${leadId}`,
+    });
+  }
+
+  if (org.auto_respond_mode !== "ai") return;
+
+  const aiReply = await generateAiReply({
+    businessName: org.name,
+    businessType: org.business_type,
+    aiContext: org.ai_context,
+    history,
+    customerMessage: message,
+    channel: "email",
+  });
+  if (!aiReply) return;
+
+  const res = await sendEmail({
+    to: fromEmail,
+    subject: `Re: your request to ${org.name}`,
+    html: `<p>${escapeHtml(aiReply)}</p>`,
+    replyTo: org.alert_email ?? undefined,
+    fromName: org.name,
+  });
+
+  await admin.from("messages").insert({
+    org_id: org.id,
+    lead_id: leadId,
+    channel: "email",
+    direction: "outbound",
+    to_address: fromEmail,
+    body: aiReply,
+    status: res.ok ? "sent" : "failed",
+    error: res.error ?? null,
+    provider_message_id: res.providerMessageId ?? null,
+  });
+  await admin.from("lead_events").insert({
+    org_id: org.id,
+    lead_id: leadId,
+    type: "email_sent",
+    payload: { ok: res.ok, error: res.error ?? null, ai: true },
+  });
+}
+
 /** Splits `"Jane Doe <jane@example.com>"` (or a bare address) into parts. */
 function parseFromHeader(from: string): { name: string | null; email: string } {
   const match = from.match(/^\s*"?([^"<]*)"?\s*<([^>]+)>\s*$/);
@@ -144,10 +277,10 @@ function parseFromHeader(from: string): { name: string | null; email: string } {
   return { name: null, email: from.trim() };
 }
 
-function stripHtml(html: string | null): string {
-  if (!html) return "";
-  return html
-    .replace(/<[^>]*>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+function escapeHtml(input: string) {
+  return input
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
