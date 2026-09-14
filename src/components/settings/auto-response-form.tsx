@@ -49,18 +49,27 @@ export function AutoResponseForm({
       {selectedMode === "ai" ? (
         <label className="block">
           <span className="mb-1 block text-xs font-medium text-slate-500">
-            Business info for the AI (services, hours, service area, pricing notes)
+            Business info for the AI
           </span>
           <textarea
             name="ai_context"
             defaultValue={aiContext ?? ""}
-            rows={4}
-            placeholder="e.g. We install and repair residential HVAC systems in the Austin metro area. Office hours Mon-Fri 8am-6pm, emergency service available 24/7. Free estimates on new installs."
+            rows={10}
+            placeholder={`Services, hours, service area, pricing structure, differentiators, FAQs — the more detail, the better the replies. e.g.:
+
+Services: Roof repair and full replacement, residential only.
+Service area: within 25 miles of Austin, TX.
+Pricing: Repairs from $8-$14 per sq ft depending on material (asphalt shingle low end, metal/tile high end). Full replacement quoted after an on-site inspection.
+Availability: Same-week for repairs, 2-3 weeks out for full replacements.
+Differentiators: Licensed & insured, 10-year workmanship warranty, free on-site estimates, locally owned since 2012.
+FAQs: We work with all major insurance companies on storm damage claims.`}
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
           />
           <span className="mt-1 block text-xs text-slate-400">
-            The AI only uses what you write here — it won&apos;t invent prices or availability,
-            and it always tells the customer a real team member will follow up too.
+            The AI only uses what you write here — it won&apos;t invent prices, availability, or
+            policies. If you give it pricing rates, it can work out a rough ballpark estimate for
+            a customer&apos;s specific job (always framed as non-binding, pending a real quote), and
+            it always tells the customer a real team member will follow up too.
           </span>
         </label>
       ) : null}
