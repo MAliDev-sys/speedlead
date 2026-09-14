@@ -83,7 +83,7 @@ export default function Home() {
               href="/signup"
               className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-brand-600/30 transition hover:bg-brand-700"
             >
-              Get a demo
+              Start free trial
             </Link>
           </div>
         </div>
@@ -120,7 +120,7 @@ export default function Home() {
                 href="/signup"
                 className="group inline-flex items-center gap-2 rounded-lg bg-brand-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-600/25 transition hover:bg-brand-700"
               >
-                Get a demo
+                Start your 7-day free trial
                 <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
               </Link>
               <a
@@ -252,7 +252,7 @@ export default function Home() {
               href="/signup"
               className="mt-8 inline-flex items-center gap-2 rounded-lg bg-white px-6 py-3 text-sm font-semibold text-brand-700 shadow-lg transition hover:bg-brand-50"
             >
-              Get a demo
+              Start free trial
               <ArrowRight className="h-4 w-4" />
             </Link>
           </div>

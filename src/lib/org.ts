@@ -52,6 +52,14 @@ export async function requireCurrentOrg(): Promise<{
     redirect("/suspended");
   }
 
+  const trialExpired =
+    org.subscription_status === "trialing" &&
+    org.trial_ends_at != null &&
+    new Date(org.trial_ends_at) < new Date();
+  if (trialExpired) {
+    redirect("/suspended?reason=trial_expired");
+  }
+
   return {
     org,
     role: membership.role,

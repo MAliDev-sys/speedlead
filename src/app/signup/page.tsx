@@ -1,34 +1,49 @@
+"use client";
+
+import { useActionState } from "react";
 import Link from "next/link";
-import { Mail } from "lucide-react";
+import { signUp } from "@/app/auth/actions";
 import { AuthLayout } from "@/components/auth-layout";
 
-const CONTACT_EMAIL = "faisalkhan682068@gmail.com";
-
-/**
- * SpeedLead is invite-only, not self-serve — accounts are created by a
- * platform admin (see app/admin/*) after payment is handled outside this
- * app. This page used to be a signup form; it's kept at this URL (rather
- * than removed) so old links/bookmarks land somewhere sensible instead of
- * a 404, and so the marketing site can still point somewhere for "I want
- * this."
- */
 export default function SignupPage() {
+  const [state, formAction, pending] = useActionState(signUp, undefined);
+
   return (
     <AuthLayout>
-      <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm shadow-slate-200/60">
-        <h1 className="text-xl font-bold text-slate-900">SpeedLead is invite-only</h1>
-        <p className="mt-2 text-sm text-slate-500">
-          Accounts are set up for you after signing on as a client — there&apos;s no self-serve
-          signup. Reach out and we&apos;ll get your workspace ready.
+      <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm shadow-slate-200/60">
+        <h1 className="text-xl font-bold text-slate-900">Create your SpeedLead account</h1>
+        <p className="mt-1 text-sm text-slate-500">
+          Start responding to leads in seconds. 7-day free trial, no card required.
         </p>
 
-        <a
-          href={`mailto:${CONTACT_EMAIL}?subject=SpeedLead%20-%20interested`}
-          className="mt-6 inline-flex items-center gap-2 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-brand-600/30 transition hover:bg-brand-700"
-        >
-          <Mail className="h-4 w-4" />
-          Contact us
-        </a>
+        <form action={formAction} className="mt-6 space-y-4">
+          <Field label="Full name" name="full_name" type="text" autoComplete="name" required />
+          <Field label="Email" name="email" type="email" autoComplete="email" required />
+          <Field
+            label="Password"
+            name="password"
+            type="password"
+            autoComplete="new-password"
+            required
+          />
+
+          {state && "error" in state && state.error ? (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{state.error}</p>
+          ) : null}
+          {state && "message" in state && state.message ? (
+            <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-600">
+              {state.message}
+            </p>
+          ) : null}
+
+          <button
+            type="submit"
+            disabled={pending}
+            className="w-full rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-brand-600/30 transition hover:bg-brand-700 disabled:opacity-60"
+          >
+            {pending ? "Creating account…" : "Create account"}
+          </button>
+        </form>
 
         <p className="mt-6 text-center text-sm text-slate-500">
           Already have an account?{" "}
@@ -38,5 +53,27 @@ export default function SignupPage() {
         </p>
       </div>
     </AuthLayout>
+  );
+}
+
+function Field(props: {
+  label: string;
+  name: string;
+  type: string;
+  autoComplete?: string;
+  required?: boolean;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-sm font-medium text-slate-700">{props.label}</span>
+      <input
+        name={props.name}
+        type={props.type}
+        autoComplete={props.autoComplete}
+        required={props.required}
+        minLength={props.type === "password" ? 8 : undefined}
+        className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+      />
+    </label>
   );
 }

@@ -12,32 +12,46 @@ for local dev + your first several customers.
 4. Apply the schema: `supabase db push` (runs everything in
    `supabase/migrations/`).
 
-## 1b. Lock down signups (required — this app is invite-only)
-SpeedLead is not self-serve: you (the platform admin) create every client
-workspace from `/admin` after handling payment yourself (Payoneer, etc. —
-nothing here processes payment). Three steps to enforce that:
+## 1b. Signup model: self-serve trial + admin upgrade
+SpeedLead uses a hybrid model, not pure self-serve and not pure invite-only:
 
-1. **Disable public signup** — Supabase → **Authentication → Sign In /
-   Providers → Email** (or **Authentication → Settings**, depending on
-   dashboard version) → turn **off** "Allow new users to sign up". This
-   blocks account creation via the public API entirely; only the
-   service-role Admin API (which `/admin` uses) can still create users.
-2. **Customize the "Invite user" email template** the same way you did
-   for Reset Password — **Authentication → Emails → Templates → Invite
-   user** — set its link to:
+- **Anyone can sign up for a free trial** (`/signup`) — 7 days
+  (`organizations.trial_ends_at`, see 0005 migration), no payment
+  collected by this app at all.
+- Once the trial window passes, `requireCurrentOrg()` redirects them to
+  `/suspended?reason=trial_expired` until you act.
+- **You (the platform admin) handle payment entirely outside this app**
+  (Payoneer, etc.), then flip that org's `plan` to `pro` and
+  `subscription_status` to `active` from `/admin` — instant, no deploy.
+- `/admin` can *also* create a client workspace directly (skipping the
+  trial-signup step and inviting their owner user by email) for
+  handshake/white-glove deals — both paths coexist.
+
+Setup:
+1. **Keep "Confirm email" off** — Supabase → **Authentication → Sign In /
+   Providers → Email** → "Confirm email" off. Self-serve signup then needs
+   no email round-trip at all, sidestepping both the shared sender's rate
+   limit and (for the admin-invite path specifically) the domain
+   restriction described below.
+2. Make sure **"Allow new users to sign up"** is **on** (same page) — this
+   is what makes `/signup` work.
+3. **Customize the "Invite user" email template** (only needed for the
+   admin-invite path) the same way you did for Reset Password —
+   **Authentication → Emails → Templates → Invite user** — set its link to:
    ```
    {{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite&next=/reset-password
    ```
    New clients land on the same "set a new password" page password-reset
    users do (`src/app/reset-password/page.tsx`) — same flow, different entry point.
-3. **Bootstrap yourself as the first platform admin** — find your own
+4. **Bootstrap yourself as the first platform admin** — find your own
    user ID at **Authentication → Users** (copy the UID next to your
    email), then in the SQL Editor:
    ```sql
    insert into platform_admins (user_id) values ('<your-uid>');
    ```
    Now `/admin` is reachable from your account (an "Admin" link appears
-   in the dashboard nav) — that's where you add every client from here on.
+   in the dashboard nav) — that's where you upgrade trials to Pro after
+   payment, or add a client directly.
 
 > **Gotcha — email confirmation rate limits in dev:** Supabase's built-in
 > email sender (used for signup confirmation links) is a shared, heavily
@@ -84,7 +98,37 @@ nothing here processes payment). Three steps to enforce that:
 5. Cost reference: ~$0.0079/SMS segment (US), ~$0.0085/min voice, number
    rental ~$1.15/mo.
 
+## 3b. Gmail SMTP (outbound email, no domain required) — free
+Resend's shared `onboarding@resend.dev` sender can only deliver to the
+Resend account's own email until a verified domain is added (confirmed
+by testing: a real recipient gets "Testing domain restriction" and the
+send fails). If you don't want to buy a domain yet, send through a
+regular Gmail account instead — Gmail can email anyone, no domain needed,
+same as normal personal email.
+1. Enable 2-Step Verification on the Gmail account you'll send from
+   (required for the next step): https://myaccount.google.com/security
+2. Create an App Password: https://myaccount.google.com/apppasswords →
+   name it "SpeedLead" → copy the 16-character password it generates
+   (not your regular Gmail password).
+3. Set `GMAIL_USER` to the full Gmail address and `GMAIL_APP_PASSWORD` to
+   that 16-character password (no spaces).
+4. When both are set, `lib/notify/email.ts` sends through Gmail instead
+   of Resend automatically — no other config needed. Also point
+   Supabase's **Authentication → Emails → SMTP Settings** at the same
+   Gmail credentials (host `smtp.gmail.com`, port `587`, username = your
+   Gmail address, password = the App Password) so admin-invite and
+   password-reset emails reach real people too, not just Resend-account
+   emails.
+5. Honest limits: ~500 emails/day on a free Gmail account (plenty at
+   small scale), and mail arrives from a personal-looking address
+   (`yourname@gmail.com`) rather than a branded one. Buying a domain
+   later and verifying it in Resend removes both limits — until then,
+   this is the free path to actually reaching real customers.
+
 ## 4. Resend (email) — free tier: 3,000 emails/mo, 1 domain
+Still required regardless of the Gmail setup above — Resend handles
+*inbound* email receiving (see 4b) and remains the outbound fallback
+when `GMAIL_USER` isn't set.
 1. Create account at https://resend.com.
 2. Add + verify a sending domain (or use their shared test domain while in
    dev), grab the **API key**.

@@ -19,6 +19,16 @@ const serverSchema = z.object({
   RESEND_API_KEY: z.string().optional(),
   RESEND_FROM_EMAIL: z.string().optional(), // e.g. "SpeedLead <leads@mail.speedlead.io>"
 
+  // Outbound email via a regular Gmail account's SMTP — the no-domain
+  // alternative to Resend for reaching arbitrary real recipients (Resend's
+  // shared onboarding@resend.dev sender can only deliver to its own
+  // account's email until a verified domain is added; Gmail SMTP has no
+  // such restriction). Preferred over Resend for sending when set — see
+  // lib/notify/email.ts. Requires 2FA enabled on the Gmail account and an
+  // App Password (not the regular login password) — see docs/SETUP.md.
+  GMAIL_USER: z.string().optional(), // e.g. "yourname@gmail.com"
+  GMAIL_APP_PASSWORD: z.string().optional(), // 16-character App Password, no spaces
+
   // Inbound email intake (customer emails the business directly — see
   // src/app/api/webhooks/resend/route.ts). Both optional: without them,
   // orgs just don't get an "Email" lead source shown in Settings.
@@ -66,6 +76,10 @@ export function hasTwilio(env: ServerEnv = getEnv()) {
 
 export function hasResend(env: ServerEnv = getEnv()) {
   return Boolean(env.RESEND_API_KEY && env.RESEND_FROM_EMAIL);
+}
+
+export function hasGmailSmtp(env: ServerEnv = getEnv()) {
+  return Boolean(env.GMAIL_USER && env.GMAIL_APP_PASSWORD);
 }
 
 export function hasStripe(env: ServerEnv = getEnv()) {
