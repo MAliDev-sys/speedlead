@@ -1,7 +1,7 @@
 import { Webhook } from "standardwebhooks";
 import { getLeadSourceByToken, createLeadAndNotify, LeadValidationError } from "@/lib/leads";
 import { getReceivedEmail } from "@/lib/notify/email";
-import { getEnv, hasResendInbound } from "@/lib/env";
+import { getEnv, hasResendInbound, hasGmailSmtp } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +19,13 @@ export async function GET() {
     resend_inbound_domain: env.RESEND_INBOUND_DOMAIN ?? null,
     resend_webhook_secret_set: Boolean(env.RESEND_WEBHOOK_SECRET),
     fully_configured: hasResendInbound(env),
+    // Which sender outbound email actually uses right now (see
+    // lib/notify/email.ts): Gmail is preferred when configured, else
+    // Resend. If gmail_user shows your address but gmail_smtp_configured
+    // is false, GMAIL_APP_PASSWORD didn't save correctly.
+    gmail_user: env.GMAIL_USER ?? null,
+    gmail_app_password_length: env.GMAIL_APP_PASSWORD?.length ?? 0,
+    gmail_smtp_configured: hasGmailSmtp(env),
   });
 }
 
