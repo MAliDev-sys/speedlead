@@ -74,6 +74,7 @@ export async function sendManualReply(_prevState: unknown, formData: FormData) {
       subject: `Re: your request to ${org.name}`,
       html: `<p>${escapeHtml(body).replace(/\n/g, "<br/>")}</p>`,
       replyTo: org.alert_email ?? undefined,
+      fromName: org.name,
     });
     ok = res.ok;
     sendError = res.error;

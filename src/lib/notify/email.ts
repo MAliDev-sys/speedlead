@@ -34,7 +34,11 @@ function getGmailTransport() {
 
 /**
  * Sends an outbound email on behalf of a tenant, with the tenant's own
- * business email set as reply-to so replies go straight to them.
+ * business email set as reply-to so replies go straight to them, and the
+ * tenant's own business name as the display name — a customer who
+ * contacted "Ak Roofing" should see a reply from "Ak Roofing", not a
+ * third-party platform name they don't recognize. That mismatch is both
+ * a trust problem and a spam-filter red flag (reads as impersonation).
  *
  * Prefers Gmail SMTP over Resend when both are configured: Resend's
  * shared `onboarding@resend.dev` sender can only deliver to the Resend
@@ -42,23 +46,28 @@ function getGmailTransport() {
  * failed delivery — see git history), which blocks every real customer.
  * A regular Gmail account's SMTP has no such restriction — it can email
  * anyone, same as normal personal email — at the cost of a lower daily
- * cap (~500/day on a free account) and a less "branded" from-address.
- * Falls back to Resend if Gmail isn't configured (fine for self-testing,
- * or once a verified domain is eventually added to Resend).
+ * cap (~500/day on a free account) and weaker deliverability than a
+ * properly authenticated custom domain (a brand-new Gmail sending
+ * identity has zero reputation, so expect some spam-folder landings
+ * until it's built up — a verified domain with SPF/DKIM/DMARC is the
+ * real, durable fix; this is the free stopgap). Falls back to Resend if
+ * Gmail isn't configured.
  */
 export async function sendEmail(params: {
   to: string;
   subject: string;
   html: string;
   replyTo?: string;
+  fromName?: string;
 }): Promise<SendEmailResult> {
   const env = getEnv();
+  const fromName = params.fromName ?? "SpeedLead";
 
   const gmail = getGmailTransport();
   if (gmail) {
     try {
       const info = await gmail.sendMail({
-        from: `"SpeedLead" <${env.GMAIL_USER}>`,
+        from: `"${fromName}" <${env.GMAIL_USER}>`,
         to: params.to,
         subject: params.subject,
         html: params.html,
@@ -80,7 +89,7 @@ export async function sendEmail(params: {
 
   try {
     const { data, error } = await resend.emails.send({
-      from: env.RESEND_FROM_EMAIL!,
+      from: `"${fromName}" <${extractAddress(env.RESEND_FROM_EMAIL!)}>`,
       to: params.to,
       subject: params.subject,
       html: params.html,
@@ -93,6 +102,12 @@ export async function sendEmail(params: {
     console.error("[email] Resend send failed", error);
     return { ok: false, error };
   }
+}
+
+/** Pulls the bare address out of "Name <address>", or returns it unchanged. */
+function extractAddress(raw: string): string {
+  const match = raw.match(/<([^>]+)>/);
+  return match ? match[1] : raw;
 }
 
 export interface ReceivedEmail {

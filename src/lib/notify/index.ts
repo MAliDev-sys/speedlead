@@ -136,6 +136,7 @@ export async function notifyNewLead(params: {
           subject: `We got your request — ${org.name}`,
           html,
           replyTo: org.alert_email ?? undefined,
+          fromName: org.name,
         });
         return logMessage({
           channel: "email",

@@ -124,6 +124,7 @@ async function runJob(admin: AdminClient, job: Job) {
       subject: `Following up — ${org.name}`,
       html: `<p>${message}</p>`,
       replyTo: org.alert_email ?? undefined,
+      fromName: org.name,
     });
     await logResult(admin, org.id, lead.id, "email", lead.email, message, res.ok, res.error, res.providerMessageId);
   }
