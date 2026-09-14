@@ -75,6 +75,18 @@ export async function createClientOrg(_prevState: unknown, formData: FormData) {
   ]);
 
   revalidatePath("/admin");
+
+  // inviteUserByEmail() doesn't error when the email already has an
+  // account — it just returns that existing user without sending
+  // anything (nothing new to invite them to). Detect that case via the
+  // user's age rather than claiming an email went out when it didn't.
+  const alreadyExisted = Date.now() - new Date(invited.user.created_at).getTime() > 10_000;
+  if (alreadyExisted) {
+    return {
+      message: `That email already has a SpeedLead account — added them as owner of "${businessName}" directly. No email was sent (nothing to invite).`,
+    };
+  }
+
   return { message: `Invited ${ownerEmail} to "${businessName}" — they'll get an email to set a password.` };
 }
 

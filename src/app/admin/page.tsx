@@ -34,6 +34,15 @@ export default async function AdminPage() {
       </header>
 
       <main className="mx-auto max-w-5xl px-4 py-8 space-y-8">
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+          <strong>Email delivery is limited right now:</strong> the sending domain
+          (<code>onboarding@resend.dev</code>) can only deliver to your own Resend account email —
+          invites to any other address won&apos;t arrive, and neither will this app&apos;s own
+          lead-response emails to real customers. Verifying a real domain in Resend (~$9-12/yr for
+          a domain if you don&apos;t have one) removes this limit entirely. Until then, test with
+          your own email.
+        </div>
+
         <section className="rounded-2xl border border-slate-200 bg-white p-5">
           <h1 className="text-lg font-bold text-slate-900">Add a client</h1>
           <p className="mt-1 text-sm text-slate-500">
