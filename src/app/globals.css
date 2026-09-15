@@ -6,6 +6,13 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
 @import "tailwindcss";
 
+/* Tailwind v4 class-based dark mode: `dark:` variants (and the manual
+   overrides below) activate when a `.dark` class is present on <html> or
+   an ancestor, toggled by ThemeToggle — not solely OS preference. See
+   layout.tsx for the pre-hydration script that applies/removes it before
+   first paint (avoids a flash of the wrong theme). */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #f8f9fc;
   --foreground: #14162b;
@@ -23,6 +30,12 @@
   --accent-400: #fbbf24;
   --accent-500: #f59e0b;
   --accent-600: #d97706;
+}
+
+.dark {
+  color-scheme: dark;
+  --background: #0b0f1a;
+  --foreground: #e2e8f0;
 }
 
 @theme inline {
@@ -53,4 +66,92 @@ body {
 .bg-dot-grid {
   background-image: radial-gradient(circle, rgba(255, 255, 255, 0.18) 1px, transparent 1px);
   background-size: 22px 22px;
+}
+
+/*
+ * Dark theme — blanket overrides rather than a per-component `dark:`
+ * pass. The app already uses a small, consistent palette (bg-white
+ * cards on a bg-slate-50 page, slate-{900..400} text, slate-{100..300}
+ * borders) everywhere, so re-skinning those specific utility classes
+ * under `.dark` covers the whole existing UI without touching 25+
+ * component files individually. Small colored accents (status badges,
+ * amber/emerald/red pills) are deliberately left as-is — light pastel
+ * badges read fine on a dark surface without a bespoke dark variant.
+ * Sections that are already dark by design (the marketing page's
+ * bg-slate-900 stats band, gradient hero/CTA, the auth split-panel)
+ * aren't touched — they use white text already and look correct in
+ * both themes unchanged.
+ */
+.dark .bg-white {
+  background-color: #111827;
+}
+.dark .bg-slate-50 {
+  background-color: #0b0f1a;
+}
+.dark .bg-slate-100 {
+  background-color: #1e293b;
+}
+
+.dark .text-slate-900 {
+  color: #f1f5f9;
+}
+.dark .text-slate-800 {
+  color: #e2e8f0;
+}
+.dark .text-slate-700 {
+  color: #cbd5e1;
+}
+.dark .text-slate-600 {
+  color: #94a3b8;
+}
+.dark .text-slate-500 {
+  color: #94a3b8;
+}
+.dark .text-slate-400 {
+  color: #64748b;
+}
+
+.dark .border-slate-100,
+.dark .border-slate-200,
+.dark .border-slate-300 {
+  border-color: #1f2937;
+}
+
+/* Hover-state variants need their own rules — a plain `.bg-slate-100`
+   override doesn't match the separate `hover:bg-slate-100` class. */
+.dark .hover\:bg-slate-50:hover,
+.dark .hover\:bg-slate-100:hover {
+  background-color: #1e293b;
+}
+.dark .hover\:bg-slate-200:hover {
+  background-color: #334155;
+}
+.dark .hover\:text-slate-900:hover {
+  color: #f1f5f9;
+}
+
+.dark .divide-slate-100,
+.dark .divide-slate-200 {
+  border-color: #1f2937;
+}
+
+.dark input,
+.dark textarea,
+.dark select {
+  background-color: #111827;
+  color: #f1f5f9;
+  border-color: #1f2937;
+}
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #64748b;
+}
+
+.dark code {
+  background-color: #1e293b;
+  color: #e2e8f0;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background-color: #0b0f1a;
 }

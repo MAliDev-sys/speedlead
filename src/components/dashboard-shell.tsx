@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Zap, Inbox, Plug, Clock3, ShieldCheck } from "lucide-react";
 import type { Organization } from "@/lib/types/database";
 import { SignOutButton } from "@/components/sign-out-button";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { isPlatformAdmin } from "@/lib/admin";
 
 const NAV = [
@@ -48,6 +49,7 @@ export async function DashboardShell(props: {
             </nav>
           </div>
           <div className="flex items-center gap-3">
+            <ThemeToggle />
             {showAdminLink ? (
               <Link
                 href="/admin"

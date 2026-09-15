@@ -2,6 +2,7 @@ import { requirePlatformAdmin } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NewClientForm } from "@/components/admin/new-client-form";
 import { ClientRow } from "@/components/admin/client-row";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Zap, Building2, CheckCircle2, Clock3, UserPlus } from "lucide-react";
 import Link from "next/link";
 import type { Organization } from "@/lib/types/database";
@@ -31,12 +32,15 @@ export default async function AdminPage() {
             </span>
             SpeedLead — Platform Admin
           </Link>
-          <Link
-            href="/leads"
-            className="rounded-full border border-slate-200 px-3.5 py-1.5 text-sm font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
-          >
-            ← Back to dashboard
-          </Link>
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <Link
+              href="/leads"
+              className="rounded-full border border-slate-200 px-3.5 py-1.5 text-sm font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+            >
+              ← Back to dashboard
+            </Link>
+          </div>
         </div>
       </header>
 
