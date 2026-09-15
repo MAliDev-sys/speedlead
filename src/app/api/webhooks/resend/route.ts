@@ -3,7 +3,7 @@ import { getLeadSourceByToken, createLeadAndNotify, LeadValidationError } from "
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getReceivedEmail, sendEmail } from "@/lib/notify/email";
 import { sendSlackLeadAlert } from "@/lib/notify/slack";
-import { generateAiReply } from "@/lib/ai-respond";
+import { generateAiReply, fallbackFollowUpReply } from "@/lib/ai-respond";
 import { getConversationHistory, stripHtml } from "@/lib/conversation";
 import { getEnv, hasResendInbound, hasGmailSmtp } from "@/lib/env";
 
@@ -228,22 +228,26 @@ async function handleReply(params: {
     });
   }
 
-  if (org.auto_respond_mode !== "ai") return;
-
-  const aiReply = await generateAiReply({
-    businessName: org.name,
-    businessType: org.business_type,
-    aiContext: org.ai_context,
-    history,
-    customerMessage: message,
-    channel: "email",
-  });
-  if (!aiReply) return;
+  // Guaranteed reply on every follow-up, same as the first-touch flow:
+  // try AI when it's on, but always fall back to a plain acknowledgment
+  // rather than sending nothing if AI mode is off or the call fails.
+  const aiReply =
+    org.auto_respond_mode === "ai"
+      ? await generateAiReply({
+          businessName: org.name,
+          businessType: org.business_type,
+          aiContext: org.ai_context,
+          history,
+          customerMessage: message,
+          channel: "email",
+        })
+      : null;
+  const replyText = aiReply ?? fallbackFollowUpReply(org.name);
 
   const res = await sendEmail({
     to: fromEmail,
     subject: `Re: your request to ${org.name}`,
-    html: `<p>${escapeHtml(aiReply)}</p>`,
+    html: `<p>${escapeHtml(replyText)}</p>`,
     replyTo: org.alert_email ?? undefined,
     fromName: org.name,
   });
@@ -254,7 +258,7 @@ async function handleReply(params: {
     channel: "email",
     direction: "outbound",
     to_address: fromEmail,
-    body: aiReply,
+    body: replyText,
     status: res.ok ? "sent" : "failed",
     error: res.error ?? null,
     provider_message_id: res.providerMessageId ?? null,
@@ -263,7 +267,7 @@ async function handleReply(params: {
     org_id: org.id,
     lead_id: leadId,
     type: "email_sent",
-    payload: { ok: res.ok, error: res.error ?? null, ai: true },
+    payload: { ok: res.ok, error: res.error ?? null, ai: Boolean(aiReply) },
   });
 }
 

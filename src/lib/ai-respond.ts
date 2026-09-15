@@ -86,3 +86,16 @@ export async function generateAiReply(params: {
     return null;
   }
 }
+
+/**
+ * Guaranteed fallback for a follow-up message when AI mode is off, or
+ * the AI call failed/timed out — mirrors the "always send something"
+ * guarantee the first-touch flow already has (see notifyNewLead()),
+ * which the reply-handling paths (SMS/email webhooks) previously lacked:
+ * they'd silently send nothing at all if generateAiReply() returned
+ * null. Worded as an acknowledgment of a follow-up, not a repeat of the
+ * first-touch greeting.
+ */
+export function fallbackFollowUpReply(orgName: string): string {
+  return `Thanks for the update — a team member from ${orgName} will follow up with you shortly.`;
+}
