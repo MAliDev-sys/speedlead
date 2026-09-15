@@ -63,7 +63,7 @@ Pricing: Repairs from $8-$14 per sq ft depending on material (asphalt shingle lo
 Availability: Same-week for repairs, 2-3 weeks out for full replacements.
 Differentiators: Licensed & insured, 10-year workmanship warranty, free on-site estimates, locally owned since 2012.
 FAQs: We work with all major insurance companies on storm damage claims.`}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
           />
           <span className="mt-1 block text-xs text-slate-400">
             The AI only uses what you write here — it won&apos;t invent prices, availability, or

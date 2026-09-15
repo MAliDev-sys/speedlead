@@ -26,12 +26,12 @@ export function NewClientForm() {
           name="business_name"
           required
           placeholder="Acme Roofing"
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
         />
       </label>
       <label>
         <span className="mb-1 block text-xs font-medium text-slate-500">Type</span>
-        <select name="business_type" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+        <select name="business_type" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20">
           {BUSINESS_TYPES.map((t) => (
             <option key={t} value={t}>
               {t}
@@ -46,12 +46,12 @@ export function NewClientForm() {
           type="email"
           required
           placeholder="owner@acmeroofing.com"
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
         />
       </label>
       <label>
         <span className="mb-1 block text-xs font-medium text-slate-500">Plan</span>
-        <select name="plan" defaultValue="demo" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+        <select name="plan" defaultValue="demo" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20">
           <option value="demo">Demo</option>
           <option value="pro">Pro</option>
         </select>

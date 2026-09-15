@@ -23,11 +23,25 @@ export function ClientRow({ org }: { org: Organization }) {
     });
   }
 
+  const initials = org.name
+    .split(" ")
+    .map((word) => word[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+
   return (
-    <tr className="border-b border-slate-100 last:border-0">
+    <tr className="border-b border-slate-100 transition last:border-0 hover:bg-slate-50">
       <td className="px-4 py-3">
-        <div className="font-medium text-slate-900">{org.name}</div>
-        <div className="text-xs text-slate-400">{org.business_type ?? "—"}</div>
+        <div className="flex items-center gap-3">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xs font-semibold text-brand-700">
+            {initials || "?"}
+          </span>
+          <div>
+            <div className="font-medium text-slate-900">{org.name}</div>
+            <div className="text-xs text-slate-400">{org.business_type ?? "—"}</div>
+          </div>
+        </div>
       </td>
       <td className="px-4 py-3 text-slate-600">{org.alert_email ?? "—"}</td>
       <td className="px-4 py-3">
@@ -35,7 +49,7 @@ export function ClientRow({ org }: { org: Organization }) {
           defaultValue={org.plan}
           disabled={isPending}
           onChange={(e) => update("plan", e.target.value)}
-          className="rounded-lg border border-slate-300 px-2 py-1 text-xs"
+          className="rounded-lg border border-slate-300 px-2 py-1 text-xs outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
         >
           <option value="demo">Demo</option>
           <option value="pro">Pro</option>

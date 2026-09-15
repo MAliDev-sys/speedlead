@@ -14,12 +14,12 @@ export function LeadSourceForm() {
           name="name"
           required
           placeholder="e.g. Google LSA"
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
         />
       </label>
       <label>
         <span className="mb-1 block text-xs font-medium text-slate-500">Type</span>
-        <select name="type" className="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+        <select name="type" className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20">
           <option value="webhook">Webhook</option>
           <option value="form">Embeddable form</option>
         </select>

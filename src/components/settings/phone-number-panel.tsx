@@ -32,7 +32,7 @@ function ConnectedPanel({ phoneNumber }: { phoneNumber: PhoneNumber }) {
             name="forwarding_number"
             defaultValue={phoneNumber.forwarding_number ?? ""}
             placeholder="+15551234567"
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
           />
         </label>
         <button
@@ -69,7 +69,7 @@ function ProvisionPanel() {
             name="forwarding_number"
             required
             placeholder="+15551234567"
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
           />
         </label>
         <label>
@@ -78,7 +78,7 @@ function ProvisionPanel() {
             name="area_code"
             placeholder="512"
             maxLength={3}
-            className="w-24 rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            className="w-24 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
           />
         </label>
         <button

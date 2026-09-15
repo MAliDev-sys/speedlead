@@ -24,7 +24,7 @@ export function SlackForm({ integration }: { integration: Integration | null }) 
         name="webhook_url"
         placeholder="https://hooks.slack.com/services/…"
         defaultValue={currentUrl}
-        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
       />
       {state && "error" in state && state.error ? (
         <p className="text-sm text-red-600">{state.error}</p>

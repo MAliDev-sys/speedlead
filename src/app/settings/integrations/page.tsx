@@ -1,3 +1,4 @@
+import { PhoneMissed, Bot, Bell, Plug, type LucideIcon } from "lucide-react";
 import { requireCurrentOrg } from "@/lib/org";
 import { createClient } from "@/lib/supabase/server";
 import { DashboardShell } from "@/components/dashboard-shell";
@@ -39,30 +40,36 @@ export default async function IntegrationsPage() {
 
   return (
     <DashboardShell org={org} userId={userId}>
-      <div className="space-y-8">
+      <div className="space-y-6">
         <section>
-          <h1 className="text-xl font-semibold text-slate-900">Integrations</h1>
+          <h1 className="text-xl font-bold text-slate-900">Integrations</h1>
           <p className="mt-1 text-sm text-slate-500">
             Connect lead sources and where the team gets notified.
           </p>
         </section>
 
-        <Section title="Missed-call text-back" description="Ring a real phone; auto-text anyone who doesn't get answered.">
+        <Section
+          icon={PhoneMissed}
+          title="Missed-call text-back"
+          description="Ring a real phone; auto-text anyone who doesn't get answered."
+        >
           <PhoneNumberPanel phoneNumber={phoneNumber as PhoneNumber | null} />
         </Section>
 
         <Section
+          icon={Bot}
           title="Auto-response"
           description="What the instant reply actually says — a fixed message, or an AI reply grounded in your business info."
         >
           <AutoResponseForm mode={org.auto_respond_mode} aiContext={org.ai_context} />
         </Section>
 
-        <Section title="Slack notifications" description="Alert your team the moment a lead comes in.">
+        <Section icon={Bell} title="Slack notifications" description="Alert your team the moment a lead comes in.">
           <SlackForm integration={slackIntegration as Integration | null} />
         </Section>
 
         <Section
+          icon={Plug}
           title="Lead sources"
           description="Webhook URLs (Zapier, Google LSA, Facebook Lead Ads), the embeddable website form, and a dedicated inbound email address."
         >
@@ -78,11 +85,23 @@ export default async function IntegrationsPage() {
   );
 }
 
-function Section(props: { title: string; description: string; children: React.ReactNode }) {
+function Section(props: {
+  icon: LucideIcon;
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-5">
-      <h2 className="text-sm font-semibold text-slate-900">{props.title}</h2>
-      <p className="mt-1 text-sm text-slate-500">{props.description}</p>
+    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/50">
+      <div className="flex items-start gap-3">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
+          <props.icon className="h-4.5 w-4.5" strokeWidth={2} />
+        </span>
+        <div>
+          <h2 className="text-sm font-semibold text-slate-900">{props.title}</h2>
+          <p className="mt-0.5 text-sm text-slate-500">{props.description}</p>
+        </div>
+      </div>
       <div className="mt-4">{props.children}</div>
     </section>
   );
@@ -99,14 +118,16 @@ function SourceRow({
 }) {
   if (source.type === "email") {
     return (
-      <div className="rounded-lg border border-slate-200 p-3">
+      <div className="rounded-xl border border-slate-200 p-3">
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-slate-800">{source.name}</span>
-          <span className="text-xs uppercase text-slate-400">{source.type}</span>
+          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium uppercase text-slate-500">
+            {source.type}
+          </span>
         </div>
         {inboundDomain ? (
           <>
-            <code className="mt-2 block truncate rounded bg-slate-50 px-2 py-1 text-xs text-slate-600">
+            <code className="mt-2 block truncate rounded-lg bg-slate-50 px-2 py-1 text-xs text-slate-600">
               {source.public_token}@{inboundDomain}
             </code>
             <p className="mt-2 text-xs text-slate-400">
@@ -129,16 +150,18 @@ function SourceRow({
       : `${appUrl}/api/webhooks/lead/${source.public_token}`;
 
   return (
-    <div className="rounded-lg border border-slate-200 p-3">
+    <div className="rounded-xl border border-slate-200 p-3">
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium text-slate-800">{source.name}</span>
-        <span className="text-xs uppercase text-slate-400">{source.type}</span>
+        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium uppercase text-slate-500">
+          {source.type}
+        </span>
       </div>
-      <code className="mt-2 block truncate rounded bg-slate-50 px-2 py-1 text-xs text-slate-600">
+      <code className="mt-2 block truncate rounded-lg bg-slate-50 px-2 py-1 text-xs text-slate-600">
         {url}
       </code>
       {source.type === "form" ? (
-        <code className="mt-2 block overflow-x-auto rounded bg-slate-900 px-2 py-2 text-xs text-slate-100">
+        <code className="mt-2 block overflow-x-auto rounded-lg bg-slate-900 px-2 py-2 text-xs text-slate-100">
           {`<script src="${appUrl}/widget.js" data-token="${source.public_token}" async></script>`}
         </code>
       ) : null}

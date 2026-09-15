@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { MessageSquareText } from "lucide-react";
 import { sendManualReply } from "@/app/actions/messages";
 import type { Lead } from "@/lib/types/database";
 
@@ -12,8 +13,13 @@ export function ReplyBox({ lead }: { lead: Lead }) {
   if (!lead.phone && !lead.email) return null;
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4">
-      <h2 className="text-sm font-semibold text-slate-900">Reply</h2>
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-200/50">
+      <div className="flex items-center gap-2">
+        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
+          <MessageSquareText className="h-3.5 w-3.5" strokeWidth={2} />
+        </span>
+        <h2 className="text-sm font-semibold text-slate-900">Reply</h2>
+      </div>
 
       <form action={formAction} onSubmit={() => setBody("")} className="mt-3 space-y-3">
         <input type="hidden" name="lead_id" value={lead.id} />

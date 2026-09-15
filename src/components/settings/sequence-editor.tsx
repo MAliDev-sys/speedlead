@@ -43,7 +43,7 @@ export function SequenceEditor({
       ) : null}
 
       {steps.map((step, i) => (
-        <div key={i} className="grid grid-cols-12 items-start gap-2 rounded-lg border border-slate-200 p-3">
+        <div key={i} className="grid grid-cols-12 items-start gap-2 rounded-xl border border-slate-200 p-3">
           <label className="col-span-3">
             <span className="mb-1 block text-xs text-slate-500">Delay (minutes)</span>
             <input
@@ -51,7 +51,7 @@ export function SequenceEditor({
               min={1}
               value={step.delay_minutes}
               onChange={(e) => updateStep(i, { delay_minutes: Number(e.target.value) })}
-              className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+              className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
             />
           </label>
           <label className="col-span-2">
@@ -59,7 +59,7 @@ export function SequenceEditor({
             <select
               value={step.channel}
               onChange={(e) => updateStep(i, { channel: e.target.value as SequenceStep["channel"] })}
-              className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+              className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
             >
               <option value="sms">SMS</option>
               <option value="whatsapp">WhatsApp</option>
@@ -72,12 +72,12 @@ export function SequenceEditor({
               value={step.template}
               onChange={(e) => updateStep(i, { template: e.target.value })}
               rows={2}
-              className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+              className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
             />
           </label>
           <button
             onClick={() => removeStep(i)}
-            className="col-span-1 mt-5 text-xs text-red-500 hover:underline"
+            className="col-span-1 mt-5 text-xs font-medium text-red-500 hover:underline"
           >
             Remove
           </button>
