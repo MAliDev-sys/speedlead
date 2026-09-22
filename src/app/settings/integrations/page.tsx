@@ -1,4 +1,4 @@
-import { PhoneMissed, Bot, Bell, Plug, type LucideIcon } from "lucide-react";
+import { PhoneMissed, Bot, Bell, Plug, Mail, type LucideIcon } from "lucide-react";
 import { requireCurrentOrg } from "@/lib/org";
 import { createClient } from "@/lib/supabase/server";
 import { DashboardShell } from "@/components/dashboard-shell";
@@ -6,6 +6,7 @@ import { SlackForm } from "@/components/settings/slack-form";
 import { LeadSourceForm } from "@/components/settings/lead-source-form";
 import { PhoneNumberPanel } from "@/components/settings/phone-number-panel";
 import { AutoResponseForm } from "@/components/settings/auto-response-form";
+import { EmailSendingForm } from "@/components/settings/email-sending-form";
 import { getEnv } from "@/lib/env";
 import type { Integration, LeadSource, PhoneNumber } from "@/lib/types/database";
 
@@ -18,11 +19,13 @@ export default async function IntegrationsPage() {
   const appUrl = env.NEXT_PUBLIC_APP_URL;
   const inboundDomain = env.RESEND_INBOUND_DOMAIN ?? null;
 
-  const [{ data: fetchedSources }, { data: slackIntegration }, { data: phoneNumber }] = await Promise.all([
-    supabase.from("lead_sources").select("*").eq("org_id", org.id).order("created_at"),
-    supabase.from("integrations").select("*").eq("org_id", org.id).eq("type", "slack").maybeSingle(),
-    supabase.from("phone_numbers").select("*").eq("org_id", org.id).maybeSingle(),
-  ]);
+  const [{ data: fetchedSources }, { data: slackIntegration }, { data: phoneNumber }, { data: emailIntegration }] =
+    await Promise.all([
+      supabase.from("lead_sources").select("*").eq("org_id", org.id).order("created_at"),
+      supabase.from("integrations").select("*").eq("org_id", org.id).eq("type", "slack").maybeSingle(),
+      supabase.from("phone_numbers").select("*").eq("org_id", org.id).maybeSingle(),
+      supabase.from("integrations").select("*").eq("org_id", org.id).eq("type", "email").maybeSingle(),
+    ]);
 
   let sources = fetchedSources ?? [];
 
@@ -66,6 +69,14 @@ export default async function IntegrationsPage() {
 
         <Section icon={Bell} title="Slack notifications" description="Alert your team the moment a lead comes in.">
           <SlackForm integration={slackIntegration as Integration | null} />
+        </Section>
+
+        <Section
+          icon={Mail}
+          title="Email sending"
+          description="Send lead replies from this business's own email address once they have one, instead of the shared SpeedLead sender."
+        >
+          <EmailSendingForm integration={emailIntegration as Integration | null} />
         </Section>
 
         <Section

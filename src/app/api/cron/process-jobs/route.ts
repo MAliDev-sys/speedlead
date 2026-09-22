@@ -120,6 +120,7 @@ async function runJob(admin: AdminClient, job: Job) {
     await logResult(admin, org.id, lead.id, "whatsapp", lead.phone, message, res.ok, res.error, res.providerMessageId);
   } else if (payload.channel === "email" && lead.email) {
     const res = await sendEmail({
+      orgId: org.id,
       to: lead.email,
       subject: `Following up — ${org.name}`,
       html: `<p>${message}</p>`,

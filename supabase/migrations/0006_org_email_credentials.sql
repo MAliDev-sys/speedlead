@@ -1,0 +1,16 @@
+-- Lets a client send their own outbound replies from their own email
+-- address/domain (via their own SMTP credentials — Gmail App Password,
+-- Outlook, their own domain's mailbox, etc.) instead of the platform's
+-- shared Gmail/Resend sender. Reuses the existing `integrations` table
+-- (same pattern as 'slack') rather than a new table.
+--
+-- Security note: SMTP credentials land in `integrations.config` (jsonb),
+-- the same place the Slack webhook URL already lives — readable only by
+-- that org's owner/admin members (existing RLS policy) or the
+-- service-role admin client. This is a pragmatic tradeoff for now, not
+-- a mistake: Supabase Vault would be the more properly-secured home for
+-- these credentials before onboarding many real clients with real email
+-- passwords at stake — worth revisiting then, not urgent at current
+-- scale. Falls back to the platform's shared sender automatically if
+-- unset or if sending through it ever fails — see lib/notify/email.ts.
+alter type integration_type add value if not exists 'email';

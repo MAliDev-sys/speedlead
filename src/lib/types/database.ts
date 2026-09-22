@@ -36,7 +36,7 @@ export type LeadStatus =
   | "spam";
 export type MessageChannel = "sms" | "email" | "whatsapp" | "slack" | "voice";
 export type MessageDirection = "outbound" | "inbound";
-export type IntegrationType = "twilio" | "slack" | "resend" | "whatsapp" | "stripe";
+export type IntegrationType = "twilio" | "slack" | "resend" | "whatsapp" | "stripe" | "email";
 export type JobStatus = "pending" | "processing" | "done" | "failed" | "cancelled";
 
 export type Organization = {

@@ -2,6 +2,7 @@ import "server-only";
 import { Resend } from "resend";
 import nodemailer, { type Transporter } from "nodemailer";
 import { getEnv, hasResend, hasGmailSmtp } from "@/lib/env";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export interface SendEmailResult {
   ok: boolean;
@@ -32,6 +33,51 @@ function getGmailTransport() {
   return gmailTransport;
 }
 
+interface OrgEmailConfig {
+  fromEmail: string;
+  smtpHost: string;
+  smtpPort: number;
+  smtpUser: string;
+  smtpPass: string;
+}
+
+/**
+ * A client's own email credentials (their business Gmail, Outlook, or
+ * domain mailbox), saved under Settings → Integrations → Email sending
+ * (see components/settings/email-sending-form.tsx). Returns null if
+ * unset or incomplete, so the caller falls back to the platform sender —
+ * this lookup should never be the reason a lead reply fails to go out.
+ */
+async function getOrgEmailConfig(orgId: string): Promise<OrgEmailConfig | null> {
+  try {
+    const admin = createAdminClient();
+    const { data } = await admin
+      .from("integrations")
+      .select("config, status")
+      .eq("org_id", orgId)
+      .eq("type", "email")
+      .maybeSingle();
+
+    if (data?.status !== "connected" || !data.config || typeof data.config !== "object") {
+      return null;
+    }
+    const config = data.config as Record<string, unknown>;
+    if (!config.from_email || !config.smtp_host || !config.smtp_user || !config.smtp_pass) {
+      return null;
+    }
+    return {
+      fromEmail: String(config.from_email),
+      smtpHost: String(config.smtp_host),
+      smtpPort: Number(config.smtp_port) || 587,
+      smtpUser: String(config.smtp_user),
+      smtpPass: String(config.smtp_pass),
+    };
+  } catch (err) {
+    console.warn("[email] getOrgEmailConfig lookup failed", err);
+    return null;
+  }
+}
+
 /**
  * Sends an outbound email on behalf of a tenant, with the tenant's own
  * business email set as reply-to so replies go straight to them, and the
@@ -40,28 +86,57 @@ function getGmailTransport() {
  * third-party platform name they don't recognize. That mismatch is both
  * a trust problem and a spam-filter red flag (reads as impersonation).
  *
- * Prefers Gmail SMTP over Resend when both are configured: Resend's
- * shared `onboarding@resend.dev` sender can only deliver to the Resend
- * account's own email until a verified domain is added (confirmed via a
- * failed delivery — see git history), which blocks every real customer.
- * A regular Gmail account's SMTP has no such restriction — it can email
- * anyone, same as normal personal email — at the cost of a lower daily
- * cap (~500/day on a free account) and weaker deliverability than a
- * properly authenticated custom domain (a brand-new Gmail sending
- * identity has zero reputation, so expect some spam-folder landings
- * until it's built up — a verified domain with SPF/DKIM/DMARC is the
- * real, durable fix; this is the free stopgap). Falls back to Resend if
- * Gmail isn't configured.
+ * Sender priority, each falling through to the next on any failure so a
+ * misconfiguration never blocks a lead reply from going out at all:
+ *   1. The org's own email credentials, if they've connected one
+ *      (Settings → Integrations → Email sending) — replies then come
+ *      from their real business address/domain, not a platform one.
+ *   2. The platform's shared Gmail SMTP, when configured — Resend's
+ *      shared `onboarding@resend.dev` sender can only deliver to the
+ *      Resend account's own email until a verified domain is added
+ *      (confirmed via a failed delivery — see git history), which
+ *      blocks every real customer; Gmail has no such restriction.
+ *   3. The platform's shared Resend sender, as a last resort.
  */
 export async function sendEmail(params: {
+  orgId: string;
   to: string;
   subject: string;
   html: string;
   replyTo?: string;
   fromName?: string;
 }): Promise<SendEmailResult> {
-  const env = getEnv();
   const fromName = params.fromName ?? "SpeedLead";
+
+  const orgConfig = await getOrgEmailConfig(params.orgId);
+  if (orgConfig) {
+    try {
+      const transport = nodemailer.createTransport({
+        host: orgConfig.smtpHost,
+        port: orgConfig.smtpPort,
+        secure: orgConfig.smtpPort === 465,
+        auth: { user: orgConfig.smtpUser, pass: orgConfig.smtpPass },
+      });
+      const info = await transport.sendMail({
+        from: `"${fromName}" <${orgConfig.fromEmail}>`,
+        to: params.to,
+        subject: params.subject,
+        html: params.html,
+        replyTo: params.replyTo,
+      });
+      return { ok: true, providerMessageId: info.messageId };
+    } catch (err) {
+      console.warn(
+        "[email] org's own SMTP failed, falling back to platform sender:",
+        err instanceof Error ? err.message : err
+      );
+      // Deliberately fall through to the platform sender below rather
+      // than returning an error — a client's misconfigured email
+      // credentials should never be the reason a lead never hears back.
+    }
+  }
+
+  const env = getEnv();
 
   const gmail = getGmailTransport();
   if (gmail) {
@@ -128,10 +203,11 @@ export interface GetReceivedEmailResult {
  * names) — the body has to be retrieved separately. See
  * api/webhooks/resend/route.ts, the only caller.
  *
- * Always goes through Resend regardless of GMAIL_* config — inbound
- * receiving isn't subject to the outbound sending-domain restriction, so
- * there's no reason to move it off Resend (which already works well
- * here — see RESEND_INBOUND_DOMAIN in docs/SETUP.md).
+ * Always goes through the platform's Resend account regardless of a
+ * client's own email config — inbound receiving isn't subject to the
+ * outbound sending-domain restriction, and a client's own mailbox isn't
+ * wired for inbound routing here anyway (that's what their dedicated
+ * SpeedLead inbound address, RESEND_INBOUND_DOMAIN, is for).
  *
  * Returns the underlying error message on failure (rather than just
  * null) so the caller can put it in the HTTP response body — Resend's

@@ -70,6 +70,7 @@ export async function sendManualReply(_prevState: unknown, formData: FormData) {
     if (!lead.email) return { error: "This lead has no email address." };
 
     const res = await sendEmail({
+      orgId: org.id,
       to: lead.email,
       subject: `Re: your request to ${org.name}`,
       html: `<p>${escapeHtml(body).replace(/\n/g, "<br/>")}</p>`,

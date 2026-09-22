@@ -33,6 +33,86 @@ export async function saveSlackWebhook(_prevState: unknown, formData: FormData) 
 }
 
 /**
+ * Saves (upserts) a tenant's own outbound email credentials, so replies to
+ * their leads come from their real business address/domain instead of the
+ * platform's shared Gmail/Resend sender — see lib/notify/email.ts for the
+ * fallback chain that uses this. Optional: leaving it unset just keeps the
+ * platform sender, which is the default for every org today.
+ */
+export async function saveEmailIntegration(_prevState: unknown, formData: FormData) {
+  const { org } = await requireCurrentOrg();
+  const fromEmail = String(formData.get("from_email") ?? "").trim();
+  const smtpHost = String(formData.get("smtp_host") ?? "").trim();
+  const smtpPort = String(formData.get("smtp_port") ?? "587").trim();
+  const smtpUser = String(formData.get("smtp_user") ?? "").trim();
+  const smtpPass = String(formData.get("smtp_pass") ?? "").trim();
+
+  const supabase = await createClient();
+
+  // Blank form = disconnect, so a client can revert to the platform
+  // sender without having to remember or re-enter their credentials.
+  if (!fromEmail && !smtpHost && !smtpUser && !smtpPass) {
+    const { error } = await supabase.from("integrations").upsert(
+      { org_id: org.id, type: "email", config: {}, status: "disconnected" },
+      { onConflict: "org_id,type" }
+    );
+    if (error) return { error: error.message };
+    revalidatePath("/settings/integrations");
+    return { message: "Custom email sender disconnected — back to the platform default." };
+  }
+
+  if (!fromEmail || !smtpHost || !smtpUser || !smtpPass) {
+    return { error: "From email, SMTP host, username, and password are all required." };
+  }
+  const port = Number(smtpPort);
+  if (!Number.isFinite(port) || port <= 0) {
+    return { error: "SMTP port must be a number (e.g. 587 or 465)." };
+  }
+
+  // A saved password never round-trips back into the client-rendered
+  // form (see EmailSendingForm below), so a masked placeholder submitted
+  // unchanged means "keep the existing password" rather than overwriting
+  // it with the literal mask.
+  let passToStore = smtpPass;
+  if (smtpPass === "••••••••") {
+    const { data: existing } = await supabase
+      .from("integrations")
+      .select("config")
+      .eq("org_id", org.id)
+      .eq("type", "email")
+      .maybeSingle();
+    const existingConfig =
+      existing?.config && typeof existing.config === "object"
+        ? (existing.config as Record<string, unknown>)
+        : null;
+    if (!existingConfig?.smtp_pass) {
+      return { error: "Enter the SMTP password." };
+    }
+    passToStore = String(existingConfig.smtp_pass);
+  }
+
+  const { error } = await supabase.from("integrations").upsert(
+    {
+      org_id: org.id,
+      type: "email",
+      config: {
+        from_email: fromEmail,
+        smtp_host: smtpHost,
+        smtp_port: port,
+        smtp_user: smtpUser,
+        smtp_pass: passToStore,
+      },
+      status: "connected",
+    },
+    { onConflict: "org_id,type" }
+  );
+  if (error) return { error: error.message };
+
+  revalidatePath("/settings/integrations");
+  return { message: "Custom email sender connected — replies will now come from this address." };
+}
+
+/**
  * Saves how the instant reply should handle the customer's actual message:
  * a fixed acknowledgment ('template') or a short Claude-generated reply
  * grounded in `ai_context` ('ai', with automatic fallback to the template

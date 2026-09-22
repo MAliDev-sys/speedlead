@@ -245,6 +245,7 @@ async function handleReply(params: {
   const replyText = aiReply ?? fallbackFollowUpReply(org.name);
 
   const res = await sendEmail({
+    orgId: org.id,
     to: fromEmail,
     subject: `Re: your request to ${org.name}`,
     html: `<p>${escapeHtml(replyText)}</p>`,

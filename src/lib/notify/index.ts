@@ -136,6 +136,7 @@ export async function notifyNewLead(params: {
       aiReplyPromise.then(async (aiReply) => {
         const html = buildEmailHtml(aiReply);
         const res = await sendEmail({
+          orgId: org.id,
           to: lead.email!,
           subject: `We got your request — ${org.name}`,
           html,

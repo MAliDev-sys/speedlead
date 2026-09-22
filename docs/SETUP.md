@@ -170,15 +170,38 @@ same as a form submission or missed call.
    the app submitted for distribution later; for the first customers, manual
    incoming-webhook URLs per org are a fine shortcut.
 
-## 7. Free cron trigger for the follow-up worker
-Pick one (both are free):
-- **cron-job.org** — create a job that hits
-  `https://<your-domain>/api/cron/process-jobs` every 1–5 minutes with a
-  `Authorization: Bearer <CRON_SECRET>` header.
-- **GitHub Actions** scheduled workflow in this repo (see
-  `.github/workflows/cron.yml` once added) — `schedule: cron: '*/5 * * * *'`.
+## 7. Per-client custom email sending — optional, add per org as needed
+By default every org's lead replies go out from the platform's shared
+sender (Gmail SMTP, falling back to Resend — see lib/notify/email.ts).
+Once a specific client has their own domain email, an org owner/admin can
+connect it under **Settings → Integrations → Email sending**: from
+address, SMTP host, port, username, password (a Gmail App Password works
+here too, same as the platform's own). Saved credentials are tried first
+on every send for that org, falling back automatically to the shared
+sender if the org's own SMTP ever fails — see the migration note in
+`supabase/migrations/0006_org_email_credentials.sql` for the security
+tradeoff of storing these in `integrations.config` today.
 
-## 8. Stripe (billing) — add once you have a pricing page ready
+## 8. Free cron trigger for the follow-up worker
+Already wired up as a GitHub Actions scheduled workflow —
+`.github/workflows/cron.yml` — which fires
+`POST /api/cron/process-jobs` every 5 minutes (GitHub's minimum interval
+for scheduled workflows; fine here since only the *first* lead response
+needs to be instant — this worker only handles delayed drip follow-ups).
+To activate it:
+1. In the GitHub repo → **Settings → Secrets and variables → Actions**:
+   - Add a repo **Variable** named `APP_URL` — your deployed URL, e.g.
+     `https://speedlead-nine.vercel.app` (no trailing slash).
+   - Add a repo **Secret** named `CRON_SECRET` — must match the
+     `CRON_SECRET` value already set in Vercel's env vars.
+2. That's it — no external account needed. Check **Actions** tab to see
+   runs, or trigger one manually via "Run workflow" (the
+   `workflow_dispatch` trigger) to test.
+
+Alternative, if you'd rather not use GitHub Actions: **cron-job.org** —
+create a job that hits the same URL/header every 1–5 minutes.
+
+## 9. Stripe (billing) — add once you have a pricing page ready
 1. Create account at https://stripe.com, get **publishable** + **secret**
    keys (test mode first).
 2. Create Products/Prices for your plans (e.g. Starter/Pro/Scale).

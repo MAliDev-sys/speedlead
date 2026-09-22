@@ -1,0 +1,29 @@
+name: Follow-up sequence worker
+
+# Free, no external account needed (unlike cron-job.org) since the code
+# already lives on GitHub. Fires /api/cron/process-jobs every 5 minutes —
+# GitHub's stated minimum interval for scheduled workflows. GitHub may
+# delay a scheduled run under load; that's fine here, since only the
+# *first* lead response needs to be instant (see docs/ARCHITECTURE.md) —
+# this only handles delayed drip follow-ups, where a few minutes of slop
+# doesn't matter.
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch: {} # lets you trigger a run manually from the Actions tab, for testing
+
+jobs:
+  process-jobs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call the follow-up worker
+        run: |
+          status=$(curl -s -o /tmp/response.txt -w "%{http_code}" \
+            -X POST "${{ vars.APP_URL }}/api/cron/process-jobs" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
+          echo "HTTP status: $status"
+          cat /tmp/response.txt
+          if [ "$status" -ge 300 ]; then
+            echo "::error::process-jobs returned $status"
+            exit 1
+          fi
