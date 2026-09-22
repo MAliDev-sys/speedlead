@@ -233,3 +233,67 @@ export async function provisionPhoneNumber(_prevState: unknown, formData: FormDa
   revalidatePath("/settings/integrations");
   return { message: "Number provisioned! Missed calls will now text back automatically." };
 }
+
+/**
+ * Attaches a number this business already owns on the platform's Twilio
+ * account (bought directly through Twilio, not via provisionPhoneNumber
+ * above) — points its voice/SMS webhooks at this app and records it, no
+ * new purchase or charge. The number must already live under the same
+ * Twilio account as TWILIO_ACCOUNT_SID/TWILIO_AUTH_TOKEN; a number bought
+ * under a different Twilio account isn't visible to this call and needs
+ * to be moved into this account (or its subaccount) first.
+ */
+export async function connectExistingPhoneNumber(_prevState: unknown, formData: FormData) {
+  const { org } = await requireCurrentOrg();
+  const env = getEnv();
+  if (!hasTwilio(env)) {
+    return { error: "Twilio isn't configured on this deployment yet (see docs/SETUP.md)." };
+  }
+
+  const phoneNumber = String(formData.get("phone_number") ?? "").trim();
+  const forwardingNumber = String(formData.get("forwarding_number") ?? "").trim();
+  if (!phoneNumber) return { error: "Enter the number you already own, e.g. +15551234567." };
+  if (!forwardingNumber) return { error: "Enter the phone number to forward calls to first." };
+
+  const supabase = await createClient();
+  const { data: existing } = await supabase
+    .from("phone_numbers")
+    .select("id")
+    .eq("org_id", org.id)
+    .maybeSingle();
+  if (existing) return { error: "This business already has a SpeedLead number." };
+
+  const client = Twilio(env.TWILIO_ACCOUNT_SID!, env.TWILIO_AUTH_TOKEN!);
+
+  try {
+    const matches = await client.incomingPhoneNumbers.list({ phoneNumber, limit: 1 });
+    if (matches.length === 0) {
+      return {
+        error:
+          "That number isn't in this Twilio account. Double-check it's E.164 format (+1…) and bought under the Twilio account connected to this app.",
+      };
+    }
+
+    const found = matches[0];
+    await client.incomingPhoneNumbers(found.sid).update({
+      voiceUrl: `${env.NEXT_PUBLIC_APP_URL}/api/webhooks/twilio/voice`,
+      voiceMethod: "POST",
+      smsUrl: `${env.NEXT_PUBLIC_APP_URL}/api/webhooks/twilio/sms`,
+      smsMethod: "POST",
+    });
+
+    const { error } = await supabase.from("phone_numbers").insert({
+      org_id: org.id,
+      twilio_sid: found.sid,
+      phone_number: found.phoneNumber,
+      forwarding_number: forwardingNumber,
+    });
+    if (error) return { error: error.message };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Twilio request failed.";
+    return { error: message };
+  }
+
+  revalidatePath("/settings/integrations");
+  return { message: "Number connected! Missed calls will now text back automatically." };
+}

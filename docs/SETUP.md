@@ -87,10 +87,17 @@ Setup:
 
 ## 3. Twilio (SMS, missed-call capture, WhatsApp) — pay as you go
 1. Create account at https://www.twilio.com/try-twilio (free trial credit).
-2. Grab **Account SID** and **Auth Token** from the console dashboard.
-3. Buy a phone number with SMS + Voice capability (~$1.15/mo) per business
-   you onboard — do this from the dashboard's "Buy a number", or later we
-   automate it via the Twilio API from the app's admin UI.
+2. Grab **Account SID** and **Auth Token** from the console dashboard, set
+   them as `TWILIO_ACCOUNT_SID`/`TWILIO_AUTH_TOKEN` — this app uses one
+   shared Twilio account across every org, each with its own number under it.
+3. Get a number for each business you onboard, either way works from
+   **Settings → Integrations → Missed-call text-back**:
+   - **"Get a new number"** — self-serve, buys one via the Twilio API
+     (~$1.15/mo) and wires its webhooks automatically.
+   - **"Connect a number you already own"** — if a number was bought
+     directly through the Twilio console (or any other way) under this
+     same Twilio account, enter it there instead; no new purchase, it just
+     points that number's webhooks at this app.
 4. WhatsApp: enable the Twilio Sandbox for WhatsApp for dev/testing
    (Messaging → Try it out → WhatsApp). For production you'll register a
    WhatsApp Sender with Meta via Twilio (takes a few days for approval) —
