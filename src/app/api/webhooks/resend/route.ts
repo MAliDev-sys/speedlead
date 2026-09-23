@@ -5,7 +5,7 @@ import { getReceivedEmail, sendEmail } from "@/lib/notify/email";
 import { sendSlackLeadAlert } from "@/lib/notify/slack";
 import { generateAiReply, fallbackFollowUpReply } from "@/lib/ai-respond";
 import { getConversationHistory, stripHtml } from "@/lib/conversation";
-import { getEnv, hasResendInbound, hasGmailSmtp } from "@/lib/env";
+import { getEnv, hasResendInbound, hasGmailSmtp, hasTwilio } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +30,13 @@ export async function GET() {
     gmail_user: env.GMAIL_USER ?? null,
     gmail_app_password_length: env.GMAIL_APP_PASSWORD?.length ?? 0,
     gmail_smtp_configured: hasGmailSmtp(env),
+    // If both lengths are 0, the env vars didn't save on THIS deployment —
+    // re-check Settings → Environment Variables in Vercel, specifically
+    // that both are checked for the "Production" environment, not just
+    // Preview/Development, then trigger a new deployment.
+    twilio_account_sid_length: env.TWILIO_ACCOUNT_SID?.length ?? 0,
+    twilio_auth_token_length: env.TWILIO_AUTH_TOKEN?.length ?? 0,
+    twilio_configured: hasTwilio(env),
   });
 }
 
