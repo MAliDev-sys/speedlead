@@ -5,7 +5,7 @@ import { getReceivedEmail, sendEmail } from "@/lib/notify/email";
 import { sendSlackLeadAlert } from "@/lib/notify/slack";
 import { generateAiReply, fallbackFollowUpReply } from "@/lib/ai-respond";
 import { getConversationHistory, stripHtml } from "@/lib/conversation";
-import { getEnv, hasResendInbound, hasGmailSmtp, hasTwilio } from "@/lib/env";
+import { getEnv, hasResendInbound, hasGmailSmtp, hasTwilio, hasAnthropic } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
@@ -14,9 +14,37 @@ export const dynamic = "force-dynamic";
  * deployment currently has configured, without exposing secret values.
  * Use this instead of guessing whether a Vercel env var actually saved:
  * it reads process.env live, on the deployment that's actually running.
+ *
+ * Add `?test_ai=1` to also fire one real Claude call with a canned HVAC
+ * conversation and return the generated reply verbatim — confirms the
+ * API key actually authenticates (not just that it's present) and lets
+ * you eyeball the tone/style directly. Costs a fraction of a cent per hit
+ * (see lib/ai-respond.ts), so it's opt-in via the query param rather than
+ * running on every plain visit to this URL.
  */
-export async function GET() {
+export async function GET(request: Request) {
   const env = getEnv();
+  const testAi = new URL(request.url).searchParams.get("test_ai") === "1";
+
+  const aiTest = testAi
+    ? await generateAiReply({
+        businessName: "Ace Roofing Co",
+        businessType: "Roofing contractor",
+        aiContext:
+          "We do roof repairs, replacements, and inspections. Free on-site quotes. Typical asphalt shingle replacement runs $6-$9 per sq ft depending on pitch and material. We serve the greater Austin, TX area. Business hours 8am-6pm Mon-Sat.",
+        history: [
+          { role: "user", content: "Hi, I noticed a leak in my roof after last week's storm, how much would it cost to fix?" },
+          {
+            role: "assistant",
+            content:
+              "Sorry to hear about the leak! A team member from Ace Roofing Co will also follow up shortly. To give you a rough idea — could you tell me roughly how large your roof is, or how old it is?",
+          },
+        ],
+        customerMessage: "It's about a 1800 sq ft roof, asphalt shingles, installed maybe 12 years ago.",
+        channel: "sms",
+      })
+    : null;
+
   return Response.json({
     resend_api_key_set: Boolean(env.RESEND_API_KEY),
     resend_from_email_set: Boolean(env.RESEND_FROM_EMAIL),
@@ -37,6 +65,12 @@ export async function GET() {
     twilio_account_sid_length: env.TWILIO_ACCOUNT_SID?.length ?? 0,
     twilio_auth_token_length: env.TWILIO_AUTH_TOKEN?.length ?? 0,
     twilio_configured: hasTwilio(env),
+    anthropic_api_key_length: env.ANTHROPIC_API_KEY?.length ?? 0,
+    anthropic_configured: hasAnthropic(env),
+    // Only present when ?test_ai=1 is passed. null with anthropic_configured
+    // true means the key is set but the live call failed (bad key, rate
+    // limit, etc — check Vercel function logs for the exact Claude API error).
+    ...(testAi ? { ai_test_reply: aiTest } : {}),
   });
 }
 
