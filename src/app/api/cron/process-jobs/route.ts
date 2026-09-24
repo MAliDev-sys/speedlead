@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getEnv } from "@/lib/env";
 import { sendSms } from "@/lib/notify/sms";
-import { sendEmail } from "@/lib/notify/email";
+import { sendEmail, getReplyToAddress } from "@/lib/notify/email";
 import { sendWhatsApp } from "@/lib/notify/whatsapp";
 
 export const dynamic = "force-dynamic";
@@ -124,7 +124,7 @@ async function runJob(admin: AdminClient, job: Job) {
       to: lead.email,
       subject: `Following up — ${org.name}`,
       html: `<p>${message}</p>`,
-      replyTo: org.alert_email ?? undefined,
+      replyTo: await getReplyToAddress(org.id, org.alert_email),
       fromName: org.name,
     });
     await logResult(admin, org.id, lead.id, "email", lead.email, message, res.ok, res.error, res.providerMessageId);

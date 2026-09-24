@@ -2,7 +2,7 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getEnv } from "@/lib/env";
 import { sendSms } from "./sms";
-import { sendEmail } from "./email";
+import { sendEmail, getReplyToAddress } from "./email";
 import { sendSlackLeadAlert } from "./slack";
 import { sendWhatsApp } from "./whatsapp";
 import { generateAiReply } from "@/lib/ai-respond";
@@ -135,12 +135,13 @@ export async function notifyNewLead(params: {
     tasks.push(
       aiReplyPromise.then(async (aiReply) => {
         const html = buildEmailHtml(aiReply);
+        const replyTo = await getReplyToAddress(org.id, org.alert_email);
         const res = await sendEmail({
           orgId: org.id,
           to: lead.email!,
           subject: `We got your request — ${org.name}`,
           html,
-          replyTo: org.alert_email ?? undefined,
+          replyTo,
           fromName: org.name,
         });
         return logMessage({

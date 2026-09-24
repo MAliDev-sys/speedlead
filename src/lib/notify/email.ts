@@ -79,6 +79,35 @@ async function getOrgEmailConfig(orgId: string): Promise<OrgEmailConfig | null> 
 }
 
 /**
+ * The address a lead reply email should set as Reply-To — this org's own
+ * dedicated inbound address (`{token}@{RESEND_INBOUND_DOMAIN}`), NOT
+ * `org.alert_email`. A customer hitting "Reply" in their email client
+ * sends wherever Reply-To points; pointing that at alert_email (a
+ * personal mailbox nobody's watching programmatically) meant every
+ * in-thread reply silently vanished instead of reaching this app —
+ * no AI conversation memory, no follow-up threading, nothing, because
+ * the message never arrived here to begin with (confirmed via live
+ * testing: a customer replying in-thread got no response, while a fresh
+ * email to the dedicated address worked fine). Falls back to
+ * `alertEmail` if inbound email isn't set up on this deployment/org, so
+ * behavior doesn't regress where it was already the only option.
+ */
+export async function getReplyToAddress(orgId: string, alertEmail: string | null): Promise<string | undefined> {
+  const env = getEnv();
+  if (env.RESEND_INBOUND_DOMAIN) {
+    const admin = createAdminClient();
+    const { data: source } = await admin
+      .from("lead_sources")
+      .select("public_token")
+      .eq("org_id", orgId)
+      .eq("type", "email")
+      .maybeSingle();
+    if (source) return `${source.public_token}@${env.RESEND_INBOUND_DOMAIN}`;
+  }
+  return alertEmail ?? undefined;
+}
+
+/**
  * Sends an outbound email on behalf of a tenant, with the tenant's own
  * business email set as reply-to so replies go straight to them, and the
  * tenant's own business name as the display name — a customer who

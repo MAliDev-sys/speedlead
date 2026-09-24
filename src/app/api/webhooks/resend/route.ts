@@ -1,7 +1,7 @@
 import { Webhook } from "standardwebhooks";
 import { getLeadSourceByToken, createLeadAndNotify, LeadValidationError } from "@/lib/leads";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getReceivedEmail, sendEmail } from "@/lib/notify/email";
+import { getReceivedEmail, sendEmail, getReplyToAddress } from "@/lib/notify/email";
 import { sendSlackLeadAlert } from "@/lib/notify/slack";
 import { generateAiReply, fallbackFollowUpReply } from "@/lib/ai-respond";
 import { getConversationHistory, stripHtml } from "@/lib/conversation";
@@ -290,7 +290,7 @@ async function handleReply(params: {
     to: fromEmail,
     subject: `Re: your request to ${org.name}`,
     html: `<p>${escapeHtml(replyText)}</p>`,
-    replyTo: org.alert_email ?? undefined,
+    replyTo: await getReplyToAddress(org.id, org.alert_email),
     fromName: org.name,
   });
 

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { sendSms } from "@/lib/notify/sms";
-import { sendEmail } from "@/lib/notify/email";
+import { sendEmail, getReplyToAddress } from "@/lib/notify/email";
 
 /**
  * Sends a one-off manual reply (SMS or email) to a lead from the
@@ -74,7 +74,7 @@ export async function sendManualReply(_prevState: unknown, formData: FormData) {
       to: lead.email,
       subject: `Re: your request to ${org.name}`,
       html: `<p>${escapeHtml(body).replace(/\n/g, "<br/>")}</p>`,
-      replyTo: org.alert_email ?? undefined,
+      replyTo: await getReplyToAddress(org.id, org.alert_email),
       fromName: org.name,
     });
     ok = res.ok;
