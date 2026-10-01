@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getEnv } from "@/lib/env";
 import { sendSms } from "@/lib/notify/sms";
 import { sendEmail, getReplyToAddress } from "@/lib/notify/email";
+import { isOrgLocked } from "@/lib/org";
 import { sendWhatsApp } from "@/lib/notify/whatsapp";
 
 export const dynamic = "force-dynamic";
@@ -100,6 +101,9 @@ async function runJob(admin: AdminClient, job: Job) {
 
   const { data: org } = await admin.from("organizations").select("*").eq("id", job.org_id).maybeSingle();
   if (!org) return;
+  // A trial-expired/suspended org gets no further free work — skip the
+  // follow-up rather than drip-messaging a lead for an org nobody's paying for.
+  if (isOrgLocked(org)) return;
 
   const payload = job.payload as { channel: string; template: string };
   const message = renderTemplate(payload.template, { name: lead.name?.split(" ")[0] || "there", org_name: org.name });

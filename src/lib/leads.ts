@@ -1,6 +1,7 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { notifyNewLead } from "@/lib/notify";
+import { isOrgLocked } from "@/lib/org";
 import type { Json, LeadSource, Organization } from "@/lib/types/database";
 
 export interface IncomingLeadFields {
@@ -84,6 +85,15 @@ export async function createLeadAndNotify(
     Array.isArray((source.config as Record<string, unknown>).notify_channels)
       ? ((source.config as Record<string, unknown>).notify_channels as string[])
       : undefined;
+
+  // The lead is recorded either way (above) so nothing is lost once the
+  // org upgrades — but a trial-expired or suspended org gets no further
+  // free work done on its behalf: no AI/template reply, no Slack alert,
+  // no follow-up sequence scheduled.
+  if (isOrgLocked(org)) {
+    console.warn(`[leads] org ${org.id} is locked (trial expired/suspended) — lead recorded, no auto-response sent`);
+    return lead;
+  }
 
   // Best-effort: a notification failure should never fail the intake
   // request itself (the lead is already saved either way).

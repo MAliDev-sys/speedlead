@@ -51,12 +51,7 @@ export async function requireCurrentOrg(): Promise<{
   if (org.subscription_status === "suspended") {
     redirect("/suspended");
   }
-
-  const trialExpired =
-    org.subscription_status === "trialing" &&
-    org.trial_ends_at != null &&
-    new Date(org.trial_ends_at) < new Date();
-  if (trialExpired) {
+  if (isTrialExpired(org)) {
     redirect("/suspended?reason=trial_expired");
   }
 
@@ -65,4 +60,29 @@ export async function requireCurrentOrg(): Promise<{
     role: membership.role,
     userId: user.id,
   };
+}
+
+function isTrialExpired(org: Pick<Organization, "subscription_status" | "trial_ends_at">): boolean {
+  return (
+    org.subscription_status === "trialing" &&
+    org.trial_ends_at != null &&
+    new Date(org.trial_ends_at) < new Date()
+  );
+}
+
+/**
+ * True once a trial org should stop getting any real work done on its
+ * behalf — not just locked out of the dashboard (requireCurrentOrg,
+ * above) but out of the actual product too. Without this, an org past
+ * its trial (or explicitly suspended) could still have its inbound leads
+ * auto-answered by AI, alerted to Slack, and drip-followed-up forever —
+ * the dashboard lock doesn't touch any of that, since leads arrive via
+ * webhooks/cron with no signed-in session to gate. Shared by the lead
+ * intake pipeline (lib/leads.ts), the reply-handling webhooks, and the
+ * follow-up cron worker so none of them keep working for an org nobody's
+ * paying for. New leads still get recorded either way — just without
+ * the auto-response — so nothing is lost once the org is upgraded.
+ */
+export function isOrgLocked(org: Pick<Organization, "subscription_status" | "trial_ends_at">): boolean {
+  return org.subscription_status === "suspended" || isTrialExpired(org);
 }

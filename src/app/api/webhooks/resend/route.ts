@@ -6,6 +6,7 @@ import { sendSlackLeadAlert } from "@/lib/notify/slack";
 import { generateAiReply, fallbackFollowUpReply } from "@/lib/ai-respond";
 import { getConversationHistory, stripHtml } from "@/lib/conversation";
 import { getEnv, hasResendInbound, hasGmailSmtp, hasTwilio, hasAnthropic } from "@/lib/env";
+import { isOrgLocked } from "@/lib/org";
 
 export const dynamic = "force-dynamic";
 
@@ -213,7 +214,16 @@ type AdminClient = ReturnType<typeof createAdminClient>;
  */
 async function handleReply(params: {
   admin: AdminClient;
-  org: { id: string; name: string; alert_email: string | null; auto_respond_mode: string; ai_context: string | null; business_type: string | null };
+  org: {
+    id: string;
+    name: string;
+    alert_email: string | null;
+    auto_respond_mode: string;
+    ai_context: string | null;
+    business_type: string | null;
+    subscription_status: string;
+    trial_ends_at: string | null;
+  };
   leadId: string;
   leadStatus: string;
   fromEmail: string;
@@ -239,6 +249,13 @@ async function handleReply(params: {
 
   if (leadStatus === "new" || leadStatus === "contacted") {
     await admin.from("leads").update({ status: "responded" }).eq("id", leadId);
+  }
+
+  // Message is recorded above regardless — but a trial-expired/suspended
+  // org gets no further free work: no Slack alert, no AI/template reply.
+  if (isOrgLocked(org)) {
+    console.warn(`[webhooks/resend] org ${org.id} is locked — reply recorded, no auto-response sent`);
+    return;
   }
 
   const { data: integration } = await admin

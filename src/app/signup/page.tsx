@@ -13,7 +13,7 @@ export default function SignupPage() {
       <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm shadow-slate-200/60">
         <h1 className="text-xl font-bold text-slate-900">Create your SpeedLead account</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Start responding to leads in seconds. 7-day free trial, no card required.
+          Start responding to leads in seconds. 1-day free trial, no card required.
         </p>
 
         <form action={formAction} className="mt-6 space-y-4">

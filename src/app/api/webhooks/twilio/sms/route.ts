@@ -4,6 +4,7 @@ import { sendSlackLeadAlert } from "@/lib/notify/slack";
 import { generateAiReply, fallbackFollowUpReply } from "@/lib/ai-respond";
 import { getConversationHistory } from "@/lib/conversation";
 import { getEnv } from "@/lib/env";
+import { isOrgLocked } from "@/lib/org";
 
 export const dynamic = "force-dynamic";
 
@@ -98,7 +99,12 @@ export async function POST(request: Request) {
           ? String((integration.config as Record<string, unknown>).webhook_url)
           : null;
 
-      if (webhookUrl && org) {
+      // Message and status update above are recorded regardless — but a
+      // trial-expired/suspended org gets no further free work: no Slack
+      // alert, no AI/template reply.
+      const locked = org ? isOrgLocked(org) : true;
+
+      if (webhookUrl && org && !locked) {
         await sendSlackLeadAlert({
           webhookUrl,
           orgName: org.name,
@@ -111,7 +117,7 @@ export async function POST(request: Request) {
         });
       }
 
-      if (org && body.trim()) {
+      if (org && !locked && body.trim()) {
         const aiReply =
           org.auto_respond_mode === "ai"
             ? await generateAiReply({
