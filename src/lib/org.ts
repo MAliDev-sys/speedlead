@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { isPlatformAdmin } from "@/lib/admin";
 import type { MemberRole, Organization } from "@/lib/types/database";
 
 /**
@@ -48,11 +49,20 @@ export async function requireCurrentOrg(): Promise<{
     redirect("/onboarding");
   }
 
-  if (org.subscription_status === "suspended") {
-    redirect("/suspended");
-  }
-  if (isTrialExpired(org)) {
-    redirect("/suspended?reason=trial_expired");
+  // Plan/trial limits are a customer-facing concept — a platform admin's
+  // own personal org (e.g. one created while testing self-serve signup)
+  // shouldn't lock them out of the dashboard just because that org's
+  // trial expired. /admin itself never had this problem (requirePlatformAdmin
+  // in lib/admin.ts has no org/trial check at all) — but logging in lands
+  // on the regular dashboard first, which does, so an admin could get
+  // stuck behind their own trial wall before ever reaching /admin.
+  if (!(await isPlatformAdmin(user.id))) {
+    if (org.subscription_status === "suspended") {
+      redirect("/suspended");
+    }
+    if (isTrialExpired(org)) {
+      redirect("/suspended?reason=trial_expired");
+    }
   }
 
   return {
