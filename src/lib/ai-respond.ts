@@ -53,6 +53,10 @@ export async function generateAiReply(params: {
   history: ConversationTurn[];
   customerMessage: string;
   channel: "sms" | "email";
+  /** Appended after the base rules; takes precedence where they conflict. */
+  extraInstructions?: string;
+  /** Per-request timeout; defaults to AI_TIMEOUT_MS. */
+  timeoutMs?: number;
 }): Promise<string | null> {
   const anthropic = getClient();
   if (!anthropic) return null;
@@ -73,13 +77,19 @@ export async function generateAiReply(params: {
       {
         model: "claude-haiku-4-5",
         max_tokens: params.channel === "email" ? 400 : 200,
-        system: `${SYSTEM_PROMPT}\n\nBusiness info:\n${businessInfo}`,
+        system: [
+          SYSTEM_PROMPT,
+          params.extraInstructions ? `Additional instructions (override the rules above where they conflict):\n${params.extraInstructions}` : null,
+          `Business info:\n${businessInfo}`,
+        ]
+          .filter(Boolean)
+          .join("\n\n"),
         messages: [
           ...params.history.map((turn) => ({ role: turn.role, content: turn.content })),
           { role: "user" as const, content: trimmedMessage },
         ],
       },
-      { timeout: AI_TIMEOUT_MS }
+      { timeout: params.timeoutMs ?? AI_TIMEOUT_MS }
     );
 
     const textBlock = response.content.find((block) => block.type === "text");

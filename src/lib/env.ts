@@ -44,6 +44,12 @@ const serverSchema = z.object({
 
   CRON_SECRET: z.string().optional(),
 
+  // Shared secret for /api/demo-reply (sent as the x-gmail-demo-key
+  // header by the Gmail demo's Apps Script).
+  GMAIL_DEMO_KEY: z.string().optional(),
+  // Company name the demo replies as (defaults to "your roofing company").
+  DEMO_COMPANY_NAME: z.string().optional(),
+
   NEXT_PUBLIC_APP_URL: z.string().url().default("http://localhost:3000"),
 });
 
