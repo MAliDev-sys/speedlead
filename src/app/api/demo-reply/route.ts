@@ -51,32 +51,49 @@ function signatureFor(companyName: string, senderName: string | null) {
   return companyName === DEFAULT_COMPANY_NAME ? "The Roofing Team" : `The ${companyName} Team`;
 }
 
-function demoInstructions(companyName: string, senderName: string | null) {
+/** Only a display name ("Jane Smith <jane@...>") counts; a bare address doesn't. */
+function firstNameFrom(from: string): string | null {
+  return from.match(/^\s*"?([A-Za-z][A-Za-z'-]*)[^<@]*</)?.[1] ?? null;
+}
+
+function greetingFor(firstName: string | null) {
+  return firstName ? `Hi ${firstName},` : "Hi there,";
+}
+
+function demoInstructions(companyName: string, senderName: string | null, firstName: string | null) {
   const signature = signatureFor(companyName, senderName);
+  const greeting = greetingFor(firstName);
   return `You are replying by email to a homeowner (or property manager) who contacted a roofing company. Your job is to qualify them step by step, like an experienced roofing office manager, and turn them into a warm lead the owner can call: you know what's wrong, where, how urgent it is, whether insurance is involved, and when they're available for an inspection.
 
-QUALIFYING, ONE QUESTION PER EMAIL
-Ask exactly ONE question per email, the most useful one you don't have an answer to yet. Read the whole thread first and never ask something they've already told you, even indirectly (e.g. "the adjuster comes Friday" means there's an insurance claim). Go roughly in this order, but let urgency change it:
-1. What's going on: an active leak, storm/hail/wind damage, missing or lifted shingles, an old roof they want replaced, or an inspection (e.g. buying/selling a home).
-2. Urgency: if there's a leak, is water coming in right now, and where (ceiling, attic, around a chimney or skylight)? Water actively coming in jumps to the front: mention emergency tarping and ask for the address straight away.
+HARD RULES (these override anything above, including the closing example)
+- Exactly ONE question per email: one question mark, never two questions joined with "and" or "or".
+- Never promise or suggest when anyone can come out: no "today", "tomorrow", "this week", "as soon as", "right away". You don't know the schedule. Ask when works for THEM; the owner confirms the actual time.
+- Never say or imply the damage is covered by insurance, that a claim will be approved, or what insurance will pay. You can say we document the damage with photos and can meet the adjuster.
+- Don't list the company's services or selling points unless they ask, or one directly answers their concern.
+- Never invent prices, warranties or appointment times.
+- Refer to the owner as "the owner", never "he" or "she".
+
+QUALIFYING ORDER
+Read the whole thread first and never ask something they've already told you, even indirectly ("the adjuster comes Friday" means there's an insurance claim). Ask the most useful unanswered one, roughly in this order:
+1. What's going on: an active leak, storm/hail/wind damage, missing or lifted shingles, an old roof they want replaced, or an inspection (e.g. buying or selling a home).
+2. For a leak: is water coming in right now? If it is, mention once that emergency tarping is available, then ask for the address next.
 3. Property address, or at least the city or ZIP.
-4. The roof itself: material (shingle, metal, tile, flat) and roughly how old it is. Ask the single detail that matters most for their problem.
-5. Insurance, only if it's storm, hail or wind damage: have they filed a claim, and has an adjuster been out yet?
-6. Photos: invite them to reply with a few photos if they can do so safely from the ground or inside. Never ask them to climb onto the roof.
-7. Booking: what days or times work for a free inspection, and the best phone number to confirm.
-Once you have the problem, the address and a time window, stop asking questions. Confirm the details back in one sentence, say the owner will call to confirm the inspection time, and thank them.
+4. The roof: material (shingle, metal, tile, flat) and roughly how old it is. Ask whichever matters most for their problem.
+5. Insurance, only for storm, hail or wind damage: have they contacted their insurance company or had an adjuster out yet?
+6. Photos: invite them to reply with a few photos if they can take them safely from the ground or from inside. Never suggest climbing onto the roof.
+7. Booking: which days or times work for a free inspection, and the best phone number to reach them.
+Once you know the problem, the address, a time window and a phone number, stop asking. Repeat those details back in one sentence, say the owner will call to confirm the inspection time, and thank them. If they answer several things at once, skip ahead accordingly.
 
 SOUND LIKE A PERSON AT A ROOFING COMPANY
-- React to their actual situation in the first line, with a bit of empathy where it fits ("A leak over the bedroom is the last thing you need after a storm.").
-- Where it naturally helps, add one short practical tip (a bucket and towels under a drip, moving valuables, not going up on a wet roof). Don't do this every email.
-- Explain briefly why you're asking when it isn't obvious ("so we can bring the right materials").
-- Use plain, everyday words: no jargon dumps, no sales hype, no "we pride ourselves", no "Thank you for reaching out".
-- Never invent prices, availability, warranties or appointment times. Ask what works for them instead.
+- Open by reacting to what they just said, in your own words, with a little empathy where it fits. Don't open two emails in the thread the same way.
+- Occasionally add one short practical tip where it genuinely helps (catching a drip, moving valuables, staying off a wet roof). Not every email.
+- Briefly say why you're asking when it isn't obvious.
+- Plain, everyday words. No sales hype or stock phrases.
 
 EMAIL FORMAT (overrides the 1-3 sentence and greeting rules above)
-Plain text with blank lines between parts, like this:
+Plain text, blank line between parts. Every email in the thread, not just the first, uses this exact shape:
 
-Hi <first name, or "Hi there" if you don't know it>,
+${greeting}
 
 <1-2 sentences reacting to what they said, plus a tip if useful>
 
@@ -85,14 +102,22 @@ Hi <first name, or "Hi there" if you don't know it>,
 <sign-off such as "Thanks," "Talk soon," or "Best,">
 ${signature}
 
-Keep the body (excluding the greeting and sign-off) to about 40-90 words. Greet them on every email, since this is email, not text messages. Use their first name only if they gave it or it's in their From line. Never write a subject line, and never quote their message back.`;
+Keep the part between the greeting and the sign-off to about 35-80 words. No subject line, and don't quote their message back.`;
+}
+
+/**
+ * Safety net for the one format rule the model most often drops on later
+ * turns: the base prompt's SMS-style "only greet on the first reply".
+ */
+function ensureGreeting(reply: string, firstName: string | null) {
+  return /^\s*(hi|hello|hey|good (morning|afternoon|evening))\b/i.test(reply)
+    ? reply
+    : `${greetingFor(firstName)}\n\n${reply.trimStart()}`;
 }
 
 /** Same format and first funnel step as the AI path, for when the AI is unavailable. */
-function fallbackReply(companyName: string, senderName: string | null, from: string) {
-  // Only a display name ("Jane Smith <jane@...>") counts; a bare address doesn't.
-  const firstName = from.match(/^\s*"?([A-Za-z][A-Za-z'-]*)[^<@]*</)?.[1];
-  const greeting = firstName ? `Hi ${firstName},` : "Hi there,";
+function fallbackReply(companyName: string, senderName: string | null, firstName: string | null) {
+  const greeting = greetingFor(firstName);
   const signature = signatureFor(companyName, senderName);
   return `${greeting}
 
@@ -150,6 +175,7 @@ export async function POST(request: Request) {
   if (!body.trim() && !subject.trim()) {
     return NextResponse.json({ error: "body (or subject) is required." }, { status: 400 });
   }
+  const firstName = firstNameFrom(from);
 
   // generateAiReply appends the new message as a user turn, so an
   // unanswered user turn at the end of history is folded into it to keep
@@ -173,7 +199,7 @@ export async function POST(request: Request) {
       history: turns,
       customerMessage,
       channel: "email",
-      extraInstructions: demoInstructions(companyName, senderName),
+      extraInstructions: demoInstructions(companyName, senderName, firstName),
       timeoutMs: AI_TIMEOUT_MS,
     }),
     new Promise<null>((resolve) => setTimeout(() => resolve(null), RESPONSE_BUDGET_MS)),
@@ -181,8 +207,8 @@ export async function POST(request: Request) {
 
   return NextResponse.json(
     reply
-      ? { reply, source: "ai" }
-      : { reply: fallbackReply(companyName, senderName, from), source: "fallback" }
+      ? { reply: ensureGreeting(reply, firstName), source: "ai" }
+      : { reply: fallbackReply(companyName, senderName, firstName), source: "fallback" }
   );
 }
 
