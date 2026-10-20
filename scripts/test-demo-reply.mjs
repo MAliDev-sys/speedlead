@@ -1,8 +1,12 @@
 // Sends a sample roofing lead to /api/demo-reply and prints the result.
 //
 //   npm run test:demo-reply                                  (local dev, key from .env.local)
-//   npm run test:demo-reply -- --url https://speedlead-nine.vercel.app
-//   npm run test:demo-reply -- --key <key> --body "Hail hit my roof yesterday"
+//   node scripts/test-demo-reply.mjs --url https://speedlead-nine.vercel.app
+//   node scripts/test-demo-reply.mjs --key <key> --body "Hail hit my roof yesterday"
+//
+// Pass options by calling node directly: Windows PowerShell 5.1 drops the
+// `--` that `npm run test:demo-reply -- --url ...` needs, so npm never
+// forwards them.
 //
 // Options (all optional):
 //   --url      base URL of the app (default: DEMO_URL in .env.local, else http://localhost:3000)
