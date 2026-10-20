@@ -30,18 +30,78 @@ const DEFAULT_COMPANY_NAME = "your roofing company";
 
 const DEMO_BUSINESS = {
   businessType: "roofing",
-  aiContext: `Residential roofing contractor: storm/hail/wind damage repair, leak repair, and full roof replacement (asphalt shingle, metal, tile).
-Free on-site inspections and estimates.
-Works directly with homeowners' insurance companies on storm damage claims, including helping document damage for the adjuster.
-Emergency tarping available for active leaks.`,
+  aiContext: `Residential and light-commercial roofing contractor.
+Services: leak repair, storm/hail/wind damage repair, missing or damaged shingles, flashing and vent repair, full roof replacement (asphalt shingle, metal, tile, flat/low-slope), gutters, and roof inspections (including for home sales).
+Free on-site inspections and written estimates. Customers can email photos of the damage ahead of time.
+Works directly with homeowners' insurance companies on storm damage claims: documents the damage with photos, and can meet the adjuster on site.
+Emergency tarping available for active leaks.
+Exact prices are only given after an inspection.`,
 };
 
-const DEMO_INSTRUCTIONS = `This is a roofing lead replying by email. Keep the reply short (2-3 sentences) and roofing-specific — speak to their roof problem, not home services in general.
-End by asking one or two qualifying questions (two is fine here, overriding the one-question rule), picking whichever of these the customer hasn't already answered in the conversation: the property address, the type of damage (e.g. leak, missing shingles, hail/storm damage, age/wear), and whether they're filing or planning to file an insurance claim.
-If they've already answered all three, skip the questions and offer to schedule a free on-site inspection instead.`;
+/**
+ * Turns the generic lead-reply prompt into a roofing sales assistant: a
+ * one-question-per-email qualification funnel, written as a real email
+ * (greeting, short paragraphs, sign-off) rather than a single paragraph.
+ * Overrides the base prompt's 1-3 sentence and no-re-greeting rules,
+ * which were written for SMS.
+ */
+function signatureFor(companyName: string, senderName: string | null) {
+  if (senderName) return `${senderName}\n${companyName}`;
+  // "The your roofing company Team" reads broken; the default gets a generic sign-off.
+  return companyName === DEFAULT_COMPANY_NAME ? "The Roofing Team" : `The ${companyName} Team`;
+}
 
-function fallbackReply(companyName: string) {
-  return `Thanks for reaching out to ${companyName} — we can help with that. What's the property address, and what kind of damage are you seeing (leak, missing shingles, hail or storm damage)? Also, are you planning to go through insurance on this?`;
+function demoInstructions(companyName: string, senderName: string | null) {
+  const signature = signatureFor(companyName, senderName);
+  return `You are replying by email to a homeowner (or property manager) who contacted a roofing company. Your job is to qualify them step by step, like an experienced roofing office manager, and turn them into a warm lead the owner can call: you know what's wrong, where, how urgent it is, whether insurance is involved, and when they're available for an inspection.
+
+QUALIFYING, ONE QUESTION PER EMAIL
+Ask exactly ONE question per email, the most useful one you don't have an answer to yet. Read the whole thread first and never ask something they've already told you, even indirectly (e.g. "the adjuster comes Friday" means there's an insurance claim). Go roughly in this order, but let urgency change it:
+1. What's going on: an active leak, storm/hail/wind damage, missing or lifted shingles, an old roof they want replaced, or an inspection (e.g. buying/selling a home).
+2. Urgency: if there's a leak, is water coming in right now, and where (ceiling, attic, around a chimney or skylight)? Water actively coming in jumps to the front: mention emergency tarping and ask for the address straight away.
+3. Property address, or at least the city or ZIP.
+4. The roof itself: material (shingle, metal, tile, flat) and roughly how old it is. Ask the single detail that matters most for their problem.
+5. Insurance, only if it's storm, hail or wind damage: have they filed a claim, and has an adjuster been out yet?
+6. Photos: invite them to reply with a few photos if they can do so safely from the ground or inside. Never ask them to climb onto the roof.
+7. Booking: what days or times work for a free inspection, and the best phone number to confirm.
+Once you have the problem, the address and a time window, stop asking questions. Confirm the details back in one sentence, say the owner will call to confirm the inspection time, and thank them.
+
+SOUND LIKE A PERSON AT A ROOFING COMPANY
+- React to their actual situation in the first line, with a bit of empathy where it fits ("A leak over the bedroom is the last thing you need after a storm.").
+- Where it naturally helps, add one short practical tip (a bucket and towels under a drip, moving valuables, not going up on a wet roof). Don't do this every email.
+- Explain briefly why you're asking when it isn't obvious ("so we can bring the right materials").
+- Use plain, everyday words: no jargon dumps, no sales hype, no "we pride ourselves", no "Thank you for reaching out".
+- Never invent prices, availability, warranties or appointment times. Ask what works for them instead.
+
+EMAIL FORMAT (overrides the 1-3 sentence and greeting rules above)
+Plain text with blank lines between parts, like this:
+
+Hi <first name, or "Hi there" if you don't know it>,
+
+<1-2 sentences reacting to what they said, plus a tip if useful>
+
+<your one question, with a short reason if needed>
+
+<sign-off such as "Thanks," "Talk soon," or "Best,">
+${signature}
+
+Keep the body (excluding the greeting and sign-off) to about 40-90 words. Greet them on every email, since this is email, not text messages. Use their first name only if they gave it or it's in their From line. Never write a subject line, and never quote their message back.`;
+}
+
+/** Same format and first funnel step as the AI path, for when the AI is unavailable. */
+function fallbackReply(companyName: string, senderName: string | null, from: string) {
+  // Only a display name ("Jane Smith <jane@...>") counts; a bare address doesn't.
+  const firstName = from.match(/^\s*"?([A-Za-z][A-Za-z'-]*)[^<@]*</)?.[1];
+  const greeting = firstName ? `Hi ${firstName},` : "Hi there,";
+  const signature = signatureFor(companyName, senderName);
+  return `${greeting}
+
+Thanks for getting in touch with ${companyName}. Sorry you're dealing with roof trouble. We'll get you sorted.
+
+So we send the right person, could you tell me a bit more about what's going on? For example, is it a leak, storm or hail damage, missing shingles, or are you thinking about a full replacement?
+
+Thanks,
+${signature}`;
 }
 
 // Long email threads (quoted replies, signatures) are truncated rather
@@ -74,6 +134,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
   const companyName = env.DEMO_COMPANY_NAME?.trim() || DEFAULT_COMPANY_NAME;
+  const senderName = env.DEMO_SENDER_NAME?.trim() || null;
 
   let json: unknown;
   try {
@@ -112,14 +173,16 @@ export async function POST(request: Request) {
       history: turns,
       customerMessage,
       channel: "email",
-      extraInstructions: DEMO_INSTRUCTIONS,
+      extraInstructions: demoInstructions(companyName, senderName),
       timeoutMs: AI_TIMEOUT_MS,
     }),
     new Promise<null>((resolve) => setTimeout(() => resolve(null), RESPONSE_BUDGET_MS)),
   ]);
 
   return NextResponse.json(
-    reply ? { reply, source: "ai" } : { reply: fallbackReply(companyName), source: "fallback" }
+    reply
+      ? { reply, source: "ai" }
+      : { reply: fallbackReply(companyName, senderName, from), source: "fallback" }
   );
 }
 
