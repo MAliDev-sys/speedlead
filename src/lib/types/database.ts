@@ -54,6 +54,10 @@ export type Organization = {
   alert_phone: string | null;
   auto_respond_mode: AutoRespondMode;
   ai_context: string | null;
+  logo_url: string | null;
+  website: string | null;
+  business_phone: string | null;
+  business_address: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -100,6 +104,7 @@ export type Lead = {
   first_response_at: string | null;
   first_response_channel: string | null;
   first_response_seconds: number | null;
+  deal_value: number | null;
   created_at: string;
   updated_at: string;
 };

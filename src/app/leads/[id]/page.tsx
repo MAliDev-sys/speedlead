@@ -136,7 +136,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
 
           <ReplyBox lead={lead} />
 
-          <LeadActions leadId={lead.id} status={lead.status} />
+          <LeadActions leadId={lead.id} status={lead.status} dealValue={lead.deal_value ?? null} />
         </aside>
       </div>
     </DashboardShell>

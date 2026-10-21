@@ -46,6 +46,8 @@ export async function notifyNewLead(params: {
     ok: boolean;
     providerMessageId?: string;
     error?: string;
+    /** Whether the body was AI-written (vs the fixed template) — feeds Reports. */
+    ai?: boolean;
   }) => {
     await admin.from("messages").insert({
       org_id: org.id,
@@ -63,7 +65,7 @@ export async function notifyNewLead(params: {
       org_id: org.id,
       lead_id: lead.id,
       type: `${row.channel}_sent`,
-      payload: { ok: row.ok, error: row.error ?? null },
+      payload: { ok: row.ok, error: row.error ?? null, ai: Boolean(row.ai) },
     });
     if (row.ok && !firstResponseChannel && row.channel !== "slack") {
       firstResponseChannel = row.channel;
@@ -109,7 +111,9 @@ export async function notifyNewLead(params: {
   if (channels.includes("sms") && lead.phone) {
     tasks.push(
       aiReplyPromise.then((aiReply) =>
-        sendFromOrgNumber(admin, org, lead, buildSmsBody(aiReply), logMessage)
+        sendFromOrgNumber(admin, org, lead, buildSmsBody(aiReply), (row) =>
+          logMessage({ ...row, ai: Boolean(aiReply) })
+        )
       )
     );
   }
@@ -126,6 +130,7 @@ export async function notifyNewLead(params: {
           ok: res.ok,
           providerMessageId: res.providerMessageId,
           error: res.error,
+          ai: Boolean(aiReply),
         });
       })
     );
@@ -151,6 +156,7 @@ export async function notifyNewLead(params: {
           ok: res.ok,
           providerMessageId: res.providerMessageId,
           error: res.error,
+          ai: Boolean(aiReply),
         });
       })
     );

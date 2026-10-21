@@ -1,8 +1,8 @@
 "use client";
 
-import { useTransition } from "react";
+import { useActionState, useTransition } from "react";
 import { UserCheck } from "lucide-react";
-import { claimLead, updateLeadStatus } from "@/app/actions/leads";
+import { claimLead, updateLeadStatus, updateLeadValue } from "@/app/actions/leads";
 import type { LeadStatus } from "@/lib/types/database";
 
 const STATUSES: LeadStatus[] = [
@@ -15,8 +15,9 @@ const STATUSES: LeadStatus[] = [
   "spam",
 ];
 
-export function LeadActions(props: { leadId: string; status: LeadStatus }) {
+export function LeadActions(props: { leadId: string; status: LeadStatus; dealValue: number | null }) {
   const [isPending, startTransition] = useTransition();
+  const [valueState, valueAction, valuePending] = useActionState(updateLeadValue, undefined);
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm shadow-slate-200/50">
@@ -50,6 +51,36 @@ export function LeadActions(props: { leadId: string; status: LeadStatus }) {
           ))}
         </select>
       </label>
+
+      <form action={valueAction} className="mt-3">
+        <input type="hidden" name="lead_id" value={props.leadId} />
+        <label className="block">
+          <span className="mb-1 block text-xs font-medium text-slate-500">Job value ($)</span>
+          <div className="flex gap-2">
+            <input
+              name="deal_value"
+              inputMode="decimal"
+              placeholder="e.g. 4500"
+              defaultValue={props.dealValue ?? ""}
+              className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+            />
+            <button
+              type="submit"
+              disabled={valuePending}
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 disabled:opacity-60"
+            >
+              {valuePending ? "Saving…" : "Save"}
+            </button>
+          </div>
+        </label>
+        <p className="mt-1 text-xs text-slate-400">Counts toward “Revenue won” in Reports when the lead is won.</p>
+        {valueState && "error" in valueState && valueState.error ? (
+          <p className="mt-1 text-xs text-red-600">{valueState.error}</p>
+        ) : null}
+        {valueState && "message" in valueState && valueState.message ? (
+          <p className="mt-1 text-xs text-emerald-600">{valueState.message}</p>
+        ) : null}
+      </form>
     </div>
   );
 }

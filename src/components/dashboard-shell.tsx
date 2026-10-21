@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Zap, Inbox, Plug, Clock3, ShieldCheck } from "lucide-react";
+import { Zap, Inbox, Plug, Clock3, ShieldCheck, Building2, BarChart3 } from "lucide-react";
 import type { Organization } from "@/lib/types/database";
 import { SignOutButton } from "@/components/sign-out-button";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -7,8 +7,10 @@ import { isPlatformAdmin } from "@/lib/admin";
 
 const NAV = [
   { href: "/leads", label: "Leads", icon: Inbox },
+  { href: "/reports", label: "Reports", icon: BarChart3 },
   { href: "/settings/integrations", label: "Integrations", icon: Plug },
   { href: "/settings/sequences", label: "Follow-ups", icon: Clock3 },
+  { href: "/settings/profile", label: "Business profile", icon: Building2 },
 ];
 
 export async function DashboardShell(props: {
@@ -27,15 +29,15 @@ export async function DashboardShell(props: {
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-8">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
+          <div className="flex flex-wrap items-center gap-x-8 gap-y-2">
             <Link href="/leads" className="flex items-center gap-2 text-sm font-bold tracking-tight text-slate-900">
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-600 text-white">
                 <Zap className="h-3.5 w-3.5" strokeWidth={2.5} />
               </span>
               SpeedLead
             </Link>
-            <nav className="flex gap-1">
+            <nav className="flex flex-wrap gap-1">
               {NAV.map((item) => (
                 <Link
                   key={item.href}
@@ -59,12 +61,20 @@ export async function DashboardShell(props: {
                 Admin
               </Link>
             ) : null}
-            <span className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 py-1 pl-1 pr-3 text-sm text-slate-700">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-100 text-[11px] font-semibold text-brand-700">
-                {initials || "?"}
-              </span>
+            <Link
+              href="/settings/profile"
+              className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 py-1 pl-1 pr-3 text-sm text-slate-700 transition hover:bg-slate-100"
+            >
+              {props.org.logo_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={props.org.logo_url} alt="" className="h-6 w-6 rounded-full bg-white object-contain" />
+              ) : (
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-100 text-[11px] font-semibold text-brand-700">
+                  {initials || "?"}
+                </span>
+              )}
               {props.org.name}
-            </span>
+            </Link>
             <SignOutButton />
           </div>
         </div>
