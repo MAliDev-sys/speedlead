@@ -68,7 +68,7 @@ function demoInstructions(companyName: string, senderName: string | null, firstN
 HARD RULES (these override anything above, including the closing example)
 - Exactly ONE question per email: one question mark, never two questions joined with "and" or "or".
 - Never promise or suggest when anyone can come out: no "today", "tomorrow", "this week", "as soon as", "right away". You don't know the schedule. Ask when works for THEM; the owner confirms the actual time.
-- Never say or imply the damage is covered by insurance, that a claim will be approved, or what insurance will pay. You can say we document the damage with photos and can meet the adjuster.
+- Never say or imply the damage is covered by insurance, that a claim will be approved, or what insurance will pay. Not even softened: "insurance usually covers this", "storm damage is typically covered" and "your policy should pay for it" are all forbidden. You can say we document the damage with photos and can meet the adjuster.
 - Don't list the company's services or selling points unless they ask, or one directly answers their concern.
 - Never invent prices, warranties or appointment times.
 - Refer to the owner as "the owner", never "he" or "she".
@@ -103,6 +103,29 @@ ${greeting}
 ${signature}
 
 Keep the part between the greeting and the sign-off to about 35-80 words. No subject line, and don't quote their message back.`;
+}
+
+// A sentence that ties insurance/a claim to covering or paying.
+const COVERAGE_CLAIM =
+  /\b(insurance|insurers?|polic(y|ies)|claims?|adjusters?)\b[^.!?\n]*\b(cover|covers|covered|coverage|pay|pays|paid|approve|approved|approval)\b|\b(cover|covers|covered|pay|pays|approve|approved)\b[^.!?\n]*\b(insurance|insurers?|polic(y|ies)|claims?)\b/i;
+
+/**
+ * Safety net for the prompt's insurance rule, which the model still broke
+ * in a production run ("insurance usually covers storm hits like that").
+ * Promising coverage is a real liability for a roofer, so any sentence
+ * making that kind of claim is dropped rather than trusted to the prompt.
+ */
+function stripCoverageClaims(reply: string) {
+  return reply
+    .split(/\n/)
+    .map((line) =>
+      (line.match(/[^.!?]+[.!?]*\s*/g) ?? [line])
+        .filter((sentence) => !COVERAGE_CLAIM.test(sentence))
+        .join("")
+        .trimEnd()
+    )
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n");
 }
 
 /**
@@ -211,7 +234,7 @@ export async function POST(request: Request) {
 
   return NextResponse.json(
     reply
-      ? { reply: ensureGreeting(reply, firstName), source: "ai" }
+      ? { reply: ensureGreeting(stripCoverageClaims(reply), firstName), source: "ai" }
       : { reply: fallbackReply(companyName, senderName, firstName), source: "fallback" }
   );
 }
