@@ -253,7 +253,7 @@ async function handleReply(params: {
 
   // Message is recorded above regardless — but a trial-expired/suspended
   // org gets no further free work: no Slack alert, no AI/template reply.
-  if (isOrgLocked(org)) {
+  if (await isOrgLocked(org)) {
     console.warn(`[webhooks/resend] org ${org.id} is locked — reply recorded, no auto-response sent`);
     return;
   }

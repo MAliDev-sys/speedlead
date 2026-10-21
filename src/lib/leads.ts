@@ -90,7 +90,7 @@ export async function createLeadAndNotify(
   // org upgrades — but a trial-expired or suspended org gets no further
   // free work done on its behalf: no AI/template reply, no Slack alert,
   // no follow-up sequence scheduled.
-  if (isOrgLocked(org)) {
+  if (await isOrgLocked(org)) {
     console.warn(`[leads] org ${org.id} is locked (trial expired/suspended) — lead recorded, no auto-response sent`);
     return lead;
   }

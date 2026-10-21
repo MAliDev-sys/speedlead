@@ -103,7 +103,7 @@ async function runJob(admin: AdminClient, job: Job) {
   if (!org) return;
   // A trial-expired/suspended org gets no further free work — skip the
   // follow-up rather than drip-messaging a lead for an org nobody's paying for.
-  if (isOrgLocked(org)) return;
+  if (await isOrgLocked(org)) return;
 
   const payload = job.payload as { channel: string; template: string };
   const message = renderTemplate(payload.template, { name: lead.name?.split(" ")[0] || "there", org_name: org.name });

@@ -102,7 +102,7 @@ export async function POST(request: Request) {
       // Message and status update above are recorded regardless — but a
       // trial-expired/suspended org gets no further free work: no Slack
       // alert, no AI/template reply.
-      const locked = org ? isOrgLocked(org) : true;
+      const locked = org ? await isOrgLocked(org) : true;
 
       if (webhookUrl && org && !locked) {
         await sendSlackLeadAlert({

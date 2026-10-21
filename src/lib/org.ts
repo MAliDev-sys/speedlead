@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { isPlatformAdmin } from "@/lib/admin";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { MemberRole, Organization } from "@/lib/types/database";
 
 /**
@@ -93,6 +94,29 @@ function isTrialExpired(org: Pick<Organization, "subscription_status" | "trial_e
  * paying for. New leads still get recorded either way — just without
  * the auto-response — so nothing is lost once the org is upgraded.
  */
-export function isOrgLocked(org: Pick<Organization, "subscription_status" | "trial_ends_at">): boolean {
-  return org.subscription_status === "suspended" || isTrialExpired(org);
+export async function isOrgLocked(
+  org: Pick<Organization, "id" | "subscription_status" | "trial_ends_at">
+): Promise<boolean> {
+  if (org.subscription_status !== "suspended" && !isTrialExpired(org)) return false;
+  // Same exemption as requireCurrentOrg(): a platform admin's own org is
+  // never plan-locked. Without this, an admin's personal org passes the
+  // dashboard check but silently stops auto-replying to leads once its
+  // trial ends. Only queried for orgs that would otherwise be locked.
+  return !(await orgHasPlatformAdmin(org.id));
+}
+
+async function orgHasPlatformAdmin(orgId: string): Promise<boolean> {
+  const admin = createAdminClient();
+  const { data: members } = await admin
+    .from("organization_members")
+    .select("user_id")
+    .eq("org_id", orgId);
+  const userIds = (members ?? []).map((m) => m.user_id);
+  if (userIds.length === 0) return false;
+  const { data: admins } = await admin
+    .from("platform_admins")
+    .select("user_id")
+    .in("user_id", userIds)
+    .limit(1);
+  return (admins ?? []).length > 0;
 }
