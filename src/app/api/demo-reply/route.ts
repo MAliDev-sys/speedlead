@@ -132,6 +132,10 @@ ${signature}`;
 // Long email threads (quoted replies, signatures) are truncated rather
 // than rejected, so a real prospect's email never gets a 400.
 const MAX_TEXT = 8_000;
+// Long threads keep their opening emails (the problem, the address) in
+// view; per-turn cap keeps a worst-case 50-turn thread's AI cost bounded.
+const MAX_HISTORY_TURNS = 50;
+const MAX_HISTORY_TURN_TEXT = 3_000;
 const text = (max: number) => z.string().transform((s) => s.slice(0, max));
 
 const bodySchema = z.object({
@@ -142,12 +146,12 @@ const bodySchema = z.object({
     .array(
       z.object({
         role: z.enum(["user", "assistant"]),
-        content: text(MAX_TEXT),
+        content: text(MAX_HISTORY_TURN_TEXT),
       })
     )
     .optional()
     .default([])
-    .transform((turns) => turns.slice(-20)),
+    .transform((turns) => turns.slice(-MAX_HISTORY_TURNS)),
 });
 
 export async function POST(request: Request) {
